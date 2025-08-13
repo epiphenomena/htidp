@@ -78,6 +78,11 @@ The HTID Protocol describes the link+token and the interaction between hosts.
 - The servers may also submit and respond HEAD requests containing a timestamp encrypted with the public key that responds indicating whether the VCARD information has changed since the timestamp
 - The servers MUST conform to existing HTTPS standards for time-to-live, response caching
 
+## Implementation
+
+This repository includes a Python/FastAPI implementation of HTIDP Version 1. 
+See [README_IMPLEMENTATION.md](README_IMPLEMENTATION.md) for details on how to run and use the implementation.
+
 ## Version 2 - Use addl fields for PGP public key: encrypt, sign, verify ID
 
 ## Version 3 - WEB-RTC: calls and data exchange
