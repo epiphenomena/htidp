@@ -2,7 +2,9 @@ import uuid
 from datetime import datetime
 from typing import Dict, Optional
 from fastapi import HTTPException
-from .models import TokenResponse, VCard, ContactInfoResponse, ExchangeRequest
+from .models import TokenResponse, ContactInfoResponse, ExchangeRequest
+import vobject
+
 
 class HTIDPService:
     """
@@ -72,12 +74,18 @@ class HTIDPService:
         if token in self.tokens:
             self.tokens[token]["used"] = True
             
-    def store_contact_info(self, contact_id: str, vcard: VCard):
+    def store_contact_info(self, contact_id: str, vcard_data: str):
         """
-        Store contact information
+        Store contact information as vCard string
         """
+        # Validate that it's a valid vCard
+        try:
+            vobject.readOne(vcard_data)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid vCard data: {str(e)}")
+            
         self.contacts[contact_id] = {
-            "vcard": vcard,
+            "vcard_data": vcard_data,
             "last_updated": datetime.utcnow()
         }
         
@@ -90,7 +98,7 @@ class HTIDPService:
             
         contact = self.contacts[contact_id]
         return ContactInfoResponse(
-            vcard=contact["vcard"],
+            vcard_data=contact["vcard_data"],
             last_updated=contact["last_updated"]
         )
         

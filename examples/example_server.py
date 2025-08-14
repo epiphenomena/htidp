@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 import os
 from datetime import datetime
 from typing import Optional
+import vobject
 
 # Create the example app
 app = FastAPI(
@@ -32,17 +33,26 @@ if os.path.exists(static_dir):
 # Simple in-memory storage for demo purposes
 contacts = {}
 exchanges = {}
+
+# Create a sample vCard for demo purposes
+def create_sample_vcard():
+    """
+    Create a sample vCard for demo purposes
+    """
+    vcard = vobject.vCard()
+    vcard.add('fn').value = "John Doe"
+    vcard.add('org').value = "Example Corp"
+    vcard.add('title').value = "Software Engineer"
+    vcard.add('email').value = "john.doe@example.com"
+    vcard.add('tel').value = "+1-555-123-4567"
+    vcard.add('adr').value = "123 Main St, Anytown, USA"
+    vcard.add('url').value = "https://example.com"
+    return vcard.serialize()
+
+my_contact_vcard = create_sample_vcard()
 my_contact = {
     "id": 1,
-    "vcard": {
-        "full_name": "John Doe",
-        "organization": "Example Corp",
-        "title": "Software Engineer",
-        "email": "john.doe@example.com",
-        "phone": "+1-555-123-4567",
-        "address": "123 Main St, Anytown, USA",
-        "website": "https://example.com"
-    },
+    "vcard_data": my_contact_vcard,
     "last_updated": "2025-08-13T10:00:00Z"
 }
 
@@ -74,31 +84,43 @@ async def root(request: Request):
 @app.get("/ui/contact", response_class=HTMLResponse)
 async def ui_contact_form(request: Request):
     """Web UI for managing contact information"""
+    # Parse the vCard to display current values
+    vcard = vobject.readOne(my_contact["vcard_data"])
+    
+    # Extract values with defaults
+    fn = getattr(vcard, 'fn', type('obj', (object,), {'value': ''})()).value
+    org = getattr(vcard, 'org', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'org') else ''
+    title = getattr(vcard, 'title', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'title') else ''
+    email = getattr(vcard, 'email', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'email') else ''
+    tel = getattr(vcard, 'tel', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'tel') else ''
+    adr = getattr(vcard, 'adr', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'adr') else ''
+    url = getattr(vcard, 'url', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'url') else ''
+    
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "My Contact Information",
         "content": f"""
         <form method="POST" action="/ui/contact">
             <label for="full_name">Full Name:</label>
-            <input type="text" id="full_name" name="full_name" value="{my_contact['vcard']['full_name']}" required>
+            <input type="text" id="full_name" name="full_name" value="{fn}" required>
             
             <label for="organization">Organization:</label>
-            <input type="text" id="organization" name="organization" value="{my_contact['vcard'].get('organization', '')}">
+            <input type="text" id="organization" name="organization" value="{org}">
             
             <label for="title">Title:</label>
-            <input type="text" id="title" name="title" value="{my_contact['vcard'].get('title', '')}">
+            <input type="text" id="title" name="title" value="{title}">
             
             <label for="email">Email:</label>
-            <input type="email" id="email" name="email" value="{my_contact['vcard'].get('email', '')}">
+            <input type="email" id="email" name="email" value="{email}">
             
             <label for="phone">Phone:</label>
-            <input type="text" id="phone" name="phone" value="{my_contact['vcard'].get('phone', '')}">
+            <input type="text" id="phone" name="phone" value="{tel}">
             
             <label for="address">Address:</label>
-            <input type="text" id="address" name="address" value="{my_contact['vcard'].get('address', '')}">
+            <input type="text" id="address" name="address" value="{adr}">
             
             <label for="website">Website:</label>
-            <input type="url" id="website" name="website" value="{my_contact['vcard'].get('website', '')}">
+            <input type="url" id="website" name="website" value="{url}">
             
             <button type="submit">Update Contact</button>
         </form>
@@ -121,15 +143,25 @@ async def ui_update_contact(
     website: Optional[str] = Form(None)
 ):
     """Update contact information via web UI"""
-    my_contact["vcard"] = {
-        "full_name": full_name,
-        "organization": organization,
-        "title": title,
-        "email": email,
-        "phone": phone,
-        "address": address,
-        "website": website
-    }
+    # Create a new vCard
+    vcard = vobject.vCard()
+    vcard.add('fn').value = full_name
+    vcard.add('version').value = "4.0"
+    
+    if organization:
+        vcard.add('org').value = organization
+    if title:
+        vcard.add('title').value = title
+    if email:
+        vcard.add('email').value = email
+    if phone:
+        vcard.add('tel').value = phone
+    if address:
+        vcard.add('adr').value = address
+    if website:
+        vcard.add('url').value = website
+    
+    my_contact["vcard_data"] = vcard.serialize()
     my_contact["last_updated"] = datetime.utcnow().isoformat() + "Z"
     
     return templates.TemplateResponse("base.html", {
@@ -149,10 +181,40 @@ async def ui_update_contact(
 @app.get("/ui/contact/view", response_class=HTMLResponse)
 async def ui_view_contact(request: Request):
     """View my contact information"""
+    # Parse vCard and create hCard HTML
+    vcard = vobject.readOne(my_contact["vcard_data"])
+    
+    # Create hCard HTML
+    hcard_html = '<div class="vcard">
+'
+    if hasattr(vcard, 'fn'):
+        hcard_html += f'  <span class="fn">{vcard.fn.value}</span>
+'
+    if hasattr(vcard, 'org'):
+        hcard_html += f'  <div class="org">{vcard.org.value}</div>
+'
+    if hasattr(vcard, 'title'):
+        hcard_html += f'  <div class="title">{vcard.title.value}</div>
+'
+    if hasattr(vcard, 'email'):
+        hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>
+'
+    if hasattr(vcard, 'tel'):
+        hcard_html += f'  <div class="tel">{vcard.tel.value}</div>
+'
+    if hasattr(vcard, 'adr'):
+        hcard_html += f'  <div class="adr">{vcard.adr.value}</div>
+'
+    if hasattr(vcard, 'url'):
+        hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>
+'
+    hcard_html += '</div>'
+    
     return templates.TemplateResponse("contact.html", {
         "request": request,
-        "vcard": my_contact["vcard"],
-        "last_updated": my_contact["last_updated"]
+        "vcard_data": my_contact["vcard_data"],
+        "last_updated": my_contact["last_updated"],
+        "hcard_html": hcard_html
     })
 
 @app.get("/contact/{contact_id}")
@@ -301,22 +363,12 @@ async def ui_accept_exchange(request: Request, token: str = Form(...)):
         </div>
         """
     
-    msg_section = ""
-    if exchange.get("msg"):
-        msg_section = f"""
-        <div class="message">
-            <p><strong>Message from requester:</strong></p>
-            <blockquote>{exchange['msg']}</blockquote>
-        </div>
-        """
-    
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "Exchange Contact Information",
         "content": f"""
         <div>
             {unsolicited_notice}
-            {msg_section}
             <p>Please fill in your information below to complete the exchange.</p>
             
             <form method="POST" action="/ui/exchange/submit">
@@ -378,11 +430,14 @@ async def ui_submit_exchange(
     # In a real implementation, we would send the data to the callback URL
     # For this demo, we'll just store the contact
     contact_id = len(contacts) + 1
+    # Create a simple vCard for the new contact
+    vcard = vobject.vCard()
+    vcard.add('fn').value = your_name
+    vcard.add('version').value = "4.0"
+    
     contacts[contact_id] = {
         "id": contact_id,
-        "vcard": {
-            "full_name": your_name
-        },
+        "vcard_data": vcard.serialize(),
         "last_updated": datetime.utcnow().isoformat() + "Z"
     }
     
@@ -446,9 +501,16 @@ async def ui_connections(request: Request):
     else:
         connections_html = "<ul>"
         for contact_id, contact in contacts.items():
+            # Parse vCard to get name
+            try:
+                vcard = vobject.readOne(contact["vcard_data"])
+                name = vcard.fn.value if hasattr(vcard, 'fn') else f"Contact {contact_id}"
+            except:
+                name = f"Contact {contact_id}"
+                
             connections_html += f"""
             <li>
-                <strong>{contact['vcard']['full_name']}</strong> 
+                <strong>{name}</strong> 
                 (ID: {contact_id})
                 <a href="/ui/connections/{contact_id}"><button style="margin-left: 10px;">View</button></a>
             </li>
@@ -494,10 +556,44 @@ async def ui_view_connection(request: Request, contact_id: int):
         })
     
     contact = contacts[str(contact_id)]
+    
+    # Parse vCard and create hCard HTML
+    try:
+        vcard = vobject.readOne(contact["vcard_data"])
+        
+        # Create hCard HTML
+        hcard_html = '<div class="vcard">
+'
+        if hasattr(vcard, 'fn'):
+            hcard_html += f'  <span class="fn">{vcard.fn.value}</span>
+'
+        if hasattr(vcard, 'org'):
+            hcard_html += f'  <div class="org">{vcard.org.value}</div>
+'
+        if hasattr(vcard, 'title'):
+            hcard_html += f'  <div class="title">{vcard.title.value}</div>
+'
+        if hasattr(vcard, 'email'):
+            hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>
+'
+        if hasattr(vcard, 'tel'):
+            hcard_html += f'  <div class="tel">{vcard.tel.value}</div>
+'
+        if hasattr(vcard, 'adr'):
+            hcard_html += f'  <div class="adr">{vcard.adr.value}</div>
+'
+        if hasattr(vcard, 'url'):
+            hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>
+'
+        hcard_html += '</div>'
+    except:
+        hcard_html = "<p>Error parsing contact information.</p>"
+    
     return templates.TemplateResponse("contact.html", {
         "request": request,
-        "vcard": contact["vcard"],
-        "last_updated": contact["last_updated"]
+        "vcard_data": contact["vcard_data"],
+        "last_updated": contact["last_updated"],
+        "hcard_html": hcard_html
     })
 
 @app.head("/contact/{contact_id}")

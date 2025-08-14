@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
-from app.models import TokenRequest, ExchangeRequest, VCard
+from app.models import TokenRequest, ExchangeRequest
 from pydantic import ValidationError
 
 @pytest.fixture
@@ -31,8 +31,7 @@ def test_request_token_invalid_name(client):
 
 def test_request_token_missing_name(client):
     # Test requesting a token with missing name field
-    # This test is no longer applicable since TokenRequest doesn't require a name field
-    # We'll test valid request with no fields instead
+    # Since TokenRequest has no required fields, this should always succeed
     response = client.post("/request-token", json={})
     
     # Should succeed since all fields are optional

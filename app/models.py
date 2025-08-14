@@ -1,72 +1,8 @@
 from pydantic import BaseModel, HttpUrl, Field, validator
 from typing import Optional, Dict, Any
 from datetime import datetime
+import vobject
 
-class VCard(BaseModel):
-    """
-    Standard VCARD information with optional additional fields
-    """
-    # Standard VCARD fields
-    full_name: str = Field(..., description="Full name of the person", min_length=1)
-    organization: Optional[str] = Field(None, description="Organization name")
-    title: Optional[str] = Field(None, description="Job title")
-    email: Optional[str] = Field(None, description="Email address")
-    phone: Optional[str] = Field(None, description="Phone number")
-    address: Optional[str] = Field(None, description="Physical address")
-    website: Optional[HttpUrl] = Field(None, description="Website URL")
-    
-    # Optional additional fields
-    additional_fields: Optional[Dict[str, Any]] = Field(None, description="Additional custom fields")
-    
-    def to_jcard(self) -> list:
-        """
-        Convert VCard to jCard format (JSON representation of vCard)
-        Returns a list representing the jCard structure
-        """
-        jcard = ["vcard", []]
-        
-        # Add required fields
-        jcard[1].append(["fn", {}, "text", self.full_name])
-        
-        # Add optional fields
-        if self.organization:
-            jcard[1].append(["org", {}, "text", self.organization])
-        if self.title:
-            jcard[1].append(["title", {}, "text", self.title])
-        if self.email:
-            jcard[1].append(["email", {}, "text", self.email])
-        if self.phone:
-            jcard[1].append(["tel", {}, "text", self.phone])
-        if self.address:
-            jcard[1].append(["adr", {}, "text", self.address])
-        if self.website:
-            jcard[1].append(["url", {}, "uri", str(self.website)])
-            
-        return jcard
-    
-    def to_hcard_html(self) -> str:
-        """
-        Convert VCard to hCard format (HTML representation of vCard)
-        Returns an HTML string with hCard microformat classes
-        """
-        html = '<div class="vcard">\n'
-        html += f'  <span class="fn">{self.full_name}</span>\n'
-        
-        if self.organization:
-            html += f'  <div class="org">{self.organization}</div>\n'
-        if self.title:
-            html += f'  <div class="title">{self.title}</div>\n'
-        if self.email:
-            html += f'  <a class="email" href="mailto:{self.email}">{self.email}</a>\n'
-        if self.phone:
-            html += f'  <div class="tel">{self.phone}</div>\n'
-        if self.address:
-            html += f'  <div class="adr">{self.address}</div>\n'
-        if self.website:
-            html += f'  <a class="url" href="{self.website}">{self.website}</a>\n'
-            
-        html += '</div>'
-        return html
 
 class TokenRequest(BaseModel):
     """
@@ -74,12 +10,14 @@ class TokenRequest(BaseModel):
     """
     pass
 
+
 class TokenResponse(BaseModel):
     """
     Response containing link and token
     """
     link: HttpUrl = Field(..., description="URL to access the contact information")
     token: str = Field(..., description="Token for authentication")
+
 
 class ExchangeRequest(BaseModel):
     """
@@ -92,6 +30,7 @@ class ExchangeRequest(BaseModel):
     public_key: str = Field(..., description="Public key for passkey authentication", min_length=1)
     callback_url: HttpUrl = Field(..., description="URL to send response back to")
 
+
 class ExchangeResponse(BaseModel):
     """
     Response sent back during the exchange process
@@ -100,12 +39,88 @@ class ExchangeResponse(BaseModel):
     perma_url: HttpUrl = Field(..., description="Permanent URL for the responding server")
     public_key: str = Field(..., description="Public key for passkey authentication")
 
+
 class ContactInfoResponse(BaseModel):
     """
     Response containing contact information
     """
-    vcard: VCard = Field(..., description="VCARD information")
+    vcard_data: str = Field(..., description="Raw vCard data as string")
     last_updated: datetime = Field(..., description="Timestamp of last update")
+    
+    @property
+    def vcard(self):
+        """
+        Parse and return vCard object
+        """
+        return vobject.readOne(self.vcard_data)
+    
+    def to_jcard(self):
+        """
+        Convert to jCard format
+        """
+        vcard = self.vcard
+        jcard = ["vcard", []]
+        
+        # Add all vCard properties to jCard
+        for prop in vcard.getChildren():
+            if prop.name == "VERSION":
+                continue  # Skip VERSION property in jCard
+            
+            # Handle different property types
+            if hasattr(prop, 'value'):
+                if isinstance(prop.value, list):
+                    value = prop.value
+                else:
+                    value = str(prop.value)
+            else:
+                value = ""
+                
+            jcard[1].append([prop.name.lower(), {}, "text", value])
+            
+        return jcard
+    
+    def to_hcard_html(self):
+        """
+        Convert to hCard formatted HTML
+        """
+        vcard = self.vcard
+        html = '<div class="vcard">\n'
+        
+        # Map common vCard properties to hCard classes
+        property_map = {
+            'FN': 'fn',
+            'N': 'n',
+            'ORG': 'org',
+            'TITLE': 'title',
+            'EMAIL': 'email',
+            'TEL': 'tel',
+            'ADR': 'adr',
+            'URL': 'url'
+        }
+        
+        # Add all vCard properties to HTML
+        for prop in vcard.getChildren():
+            prop_name = prop.name
+            hcard_class = property_map.get(prop_name, prop_name.lower())
+            
+            if hasattr(prop, 'value'):
+                if isinstance(prop.value, list):
+                    value = ', '.join(str(v) for v in prop.value)
+                else:
+                    value = str(prop.value)
+            else:
+                value = ""
+            
+            if prop_name == "EMAIL":
+                html += f'  <a class="{hcard_class}" href="mailto:{value}">{value}</a>\n'
+            elif prop_name == "URL":
+                html += f'  <a class="{hcard_class}" href="{value}">{value}</a>\n'
+            else:
+                html += f'  <span class="{hcard_class}">{value}</span>\n'
+                
+        html += '</div>'
+        return html
+
 
 class HeadResponse(BaseModel):
     """

@@ -1,11 +1,13 @@
 from fastapi import APIRouter, HTTPException, Request, Header
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from ..models import (
     TokenRequest, TokenResponse, ExchangeRequest, 
-    VCard, ContactInfoResponse
+    ContactInfoResponse
 )
 from ..service import htidp_service
+import vobject
+import json
 
 # Set up templates
 templates = Jinja2Templates(directory="app/templates")
@@ -109,33 +111,24 @@ async def get_contact_info(request: Request, contact_id: str, accept: str = Head
     # Check if client specifically requested jCard format
     if "application/vcard+json" in accept:
         # Return jCard format
-        jcard = contact_info.vcard.to_jcard()
+        jcard = contact_info.to_jcard()
         return JSONResponse(content=jcard)
     
-    # Check if client specifically requested hCard format
+    # Check if client specifically requested vCard format
     if "text/vcard" in accept:
-        # Return vCard format (traditional vCard text format)
-        # For simplicity, we'll return a basic vCard string
-        vcard_text = f"BEGIN:VCARD\\nVERSION:4.0\\nFN:{contact_info.vcard.full_name}\\n"
-        if contact_info.vcard.organization:
-            vcard_text += f"ORG:{contact_info.vcard.organization}\\n"
-        if contact_info.vcard.email:
-            vcard_text += f"EMAIL:{contact_info.vcard.email}\\n"
-        if contact_info.vcard.phone:
-            vcard_text += f"TEL:{contact_info.vcard.phone}\\n"
-        vcard_text += "END:VCARD"
-        return Response(content=vcard_text, media_type="text/vcard")
+        # Return vCard format
+        return Response(content=contact_info.vcard_data, media_type="text/vcard")
     
     # For demonstration, we'll return the same data in both formats
     # In a real implementation, HTML might show a user-friendly view
     if "text/html" in accept:
         # Return hCard formatted HTML
-        hcard_html = contact_info.vcard.to_hcard_html()
+        hcard_html = contact_info.to_hcard_html()
         return templates.TemplateResponse(
             request=request,
             name="contact.html",
             context={
-                "vcard": contact_info.vcard,
+                "vcard_data": contact_info.vcard_data,
                 "last_updated": contact_info.last_updated,
                 "hcard_html": hcard_html
             }

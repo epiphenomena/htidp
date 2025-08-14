@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Contact Information - {{ vcard.full_name }}{% endblock %}
+{% block title %}Contact Information{% endblock %}
 
 {% block header %}Contact Information{% endblock %}
 
@@ -10,31 +10,7 @@
 {{ hcard_html|safe }}
 {% else %}
 <div>
-    <h2>{{ vcard.full_name }}</h2>
-    
-    {% if vcard.organization %}
-    <p><strong>Organization:</strong> {{ vcard.organization }}</p>
-    {% endif %}
-    
-    {% if vcard.title %}
-    <p><strong>Title:</strong> {{ vcard.title }}</p>
-    {% endif %}
-    
-    {% if vcard.email %}
-    <p><strong>Email:</strong> <a href="mailto:{{ vcard.email }}">{{ vcard.email }}</a></p>
-    {% endif %}
-    
-    {% if vcard.phone %}
-    <p><strong>Phone:</strong> {{ vcard.phone }}</p>
-    {% endif %}
-    
-    {% if vcard.address %}
-    <p><strong>Address:</strong> {{ vcard.address }}</p>
-    {% endif %}
-    
-    {% if vcard.website %}
-    <p><strong>Website:</strong> <a href="{{ vcard.website }}" target="_blank">{{ vcard.website }}</a></p>
-    {% endif %}
+    <p>Contact information is available in vCard format.</p>
 </div>
 {% endif %}
 
