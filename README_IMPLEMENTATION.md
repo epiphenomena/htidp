@@ -14,6 +14,26 @@ This is a Python/FastAPI implementation of the HTIDP (HyperText ID Protocol).
 
 ## Installation
 
+### Using uv (recommended)
+
+1. Clone the repository:
+   ```
+   git clone <repository-url>
+   cd htidp
+   ```
+
+2. Install [uv](https://github.com/astral-sh/uv) if you haven't already:
+   ```
+   pip install uv
+   ```
+
+3. Install dependencies:
+   ```
+   uv sync
+   ```
+
+### Using pip
+
 1. Clone the repository:
    ```
    git clone <repository-url>
@@ -28,7 +48,7 @@ This is a Python/FastAPI implementation of the HTIDP (HyperText ID Protocol).
 
 3. Install dependencies:
    ```
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
 ## Running the Application
@@ -36,11 +56,21 @@ This is a Python/FastAPI implementation of the HTIDP (HyperText ID Protocol).
 ### Development Mode
 
 ```
+uv run htidp-server --reload
+```
+
+Or using the module directly:
+```
 python -m app.server --reload
 ```
 
 ### Production Mode
 
+```
+uv run htidp-server
+```
+
+Or using the module directly:
 ```
 python -m app.server
 ```
@@ -70,7 +100,12 @@ See [examples/README.md](examples/README.md) for details on how to run the examp
 To run tests:
 
 ```
-pip install -r tests/requirements.txt
+uv run pytest
+```
+
+Or using pip installation:
+```
+pip install -e .[test]
 pytest
 ```
 

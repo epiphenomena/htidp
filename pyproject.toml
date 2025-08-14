@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "htidp"
+version = "1.0.0"
+description = "HyperText ID Protocol - RESTful API for sharing contact information"
+readme = "README.md"
+authors = [
+    {name = "HTIDP Contributors"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.30.6",
+    "pydantic==2.8.2",
+    "httpx==0.27.0",
+    "python-jose==3.3.0",
+    "passlib==1.7.4",
+    "python-multipart==0.0.9",
+    "jinja2==3.1.4",
+    "markupsafe==2.1.5",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==7.4.3",
+    "httpx==0.27.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/epiphenomena/htidp"
+Repository = "https://github.com/epiphenomena/htidp.git"
+Documentation = "https://github.com/epiphenomena/htidp/blob/main/README_IMPLEMENTATION.md"
+
+[project.scripts]
+htidp-server = "app.server:main"
+htidp-example-server = "examples.example_server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "examples*"]
+
+[tool.setuptools.package-data]
+app = ["templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--cov=app",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+]
+
+[tool.coverage.run]
+source = ["app"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest==7.4.3",
+    "httpx==0.27.0",
+]

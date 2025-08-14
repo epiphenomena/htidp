@@ -83,6 +83,8 @@ The HTID Protocol describes the link+token and the interaction between hosts.
 This repository includes a Python/FastAPI implementation of HTIDP. 
 See [README_IMPLEMENTATION.md](README_IMPLEMENTATION.md) for details on how to run and use the implementation.
 
+The project now uses `pyproject.toml` for dependency management and can be installed using [uv](https://github.com/astral-sh/uv) for faster dependency resolution and installation.
+
 ## Future Enhancements
 
 ### Version 2 - Use addl fields for PGP public key: encrypt, sign, verify ID
