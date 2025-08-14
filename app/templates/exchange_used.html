@@ -1,10 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}HTIDP Exchange - {{ requester_name }}{% endblock %}
+{% block title %}HTIDP Exchange{% endblock %}
 
 {% block header %}HTIDP Contact Exchange{% endblock %}
 
 {% block content %}
+{% if unsolicited %}
+<div class="warning">
+    <p><strong>Notice:</strong> This was an unsolicited connection request.</p>
+</div>
+{% endif %}
+
 <p>You are exchanging contact information with: <strong>{{ requester_name }}</strong></p>
+
+{% if requester_msg %}
+<div class="message">
+    <p><strong>Message from requester:</strong></p>
+    <blockquote>{{ requester_msg }}</blockquote>
+</div>
+{% endif %}
+
 <p>This exchange has already been initiated. Please check your client application for confirmation.</p>
 {% endblock %}

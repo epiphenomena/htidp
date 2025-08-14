@@ -16,23 +16,44 @@ class HTIDPService:
         self.contacts: Dict[str, dict] = {}
         self.connections: Dict[str, dict] = {}  # Store connections between parties
         
-    def generate_token(self, requester_name: str) -> TokenResponse:
+    def generate_token(self, msg: Optional[str] = None) -> TokenResponse:
         """
         Generate a new link+token for sharing contact information
         """
         token = str(uuid.uuid4())
-        link = f"https://example.com/v1/exchange/{token}"
+        link = f"https://example.com/exchange/{token}"
         
         self.tokens[token] = {
-            "requester_name": requester_name,
+            "msg": msg,
             "created_at": datetime.utcnow(),
-            "used": False
+            "used": False,
+            "unsolicited": False  # Track if this was a public/unsolicited request
         }
         
         return TokenResponse(
             link=link,
             token=token,
-            requester_name=requester_name
+            msg=msg
+        )
+        
+    def generate_public_token(self, msg: Optional[str] = None) -> TokenResponse:
+        """
+        Generate a new link+token for public/unsolicited sharing
+        """
+        token = str(uuid.uuid4())
+        link = f"https://example.com/public-exchange/{token}"
+        
+        self.tokens[token] = {
+            "msg": msg,
+            "created_at": datetime.utcnow(),
+            "used": False,
+            "unsolicited": True  # Mark as public/unsolicited request
+        }
+        
+        return TokenResponse(
+            link=link,
+            token=token,
+            msg=msg
         )
         
     def validate_token(self, token: str) -> Optional[dict]:
@@ -92,10 +113,12 @@ class HTIDPService:
         self.connections[connection_id] = {
             "token": token,
             "requester_name": exchange_request.name,
+            "requester_msg": exchange_request.msg,
             "requester_url": str(exchange_request.perma_url),
             "requester_public_key": exchange_request.public_key,
             "callback_url": str(exchange_request.callback_url),
-            "created_at": datetime.utcnow()
+            "created_at": datetime.utcnow(),
+            "unsolicited": token_info.get("unsolicited", False)
         }
         
         # Mark token as used
@@ -109,9 +132,12 @@ class HTIDPService:
         # Find connection by token
         for connection_id, connection in self.connections.items():
             if connection["token"] == token:
+                token_info = self.tokens.get(token, {})
                 return {
-                    "post_url": f"/v1/exchange/{token}",
-                    "requester_name": connection["requester_name"]
+                    "post_url": f"/exchange/{token}",
+                    "requester_name": connection["requester_name"],
+                    "requester_msg": connection.get("requester_msg"),
+                    "unsolicited": connection.get("unsolicited", False)
                 }
         return None
 

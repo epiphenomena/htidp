@@ -179,14 +179,26 @@ async def ui_exchange_form(request: Request):
         "header": "Exchange Contacts",
         "content": """
         <div>
-            <h3>Request Contact Exchange</h3>
+            <h3>Request Contact Exchange (Authenticated)</h3>
             <p>Generate a token to share your contact information with another person.</p>
             
             <form method="POST" action="/ui/exchange/request">
-                <label for="requester_name">Your Name/Nickname:</label>
-                <input type="text" id="requester_name" name="requester_name" placeholder="Enter your name or nickname" required>
+                <label for="msg">Your Message (optional):</label>
+                <textarea id="msg" name="msg" placeholder="Add a message to include with your connection request" maxlength="240" rows="3"></textarea>
                 
                 <button type="submit">Generate Exchange Token</button>
+            </form>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h3>Public Exchange Request</h3>
+            <p>Generate a token that anyone can use to connect with you (e.g., for QR codes).</p>
+            
+            <form method="POST" action="/ui/exchange/public-request">
+                <label for="public_msg">Your Message (optional):</label>
+                <textarea id="public_msg" name="public_msg" placeholder="Add a message for public connection requests" maxlength="240" rows="3"></textarea>
+                
+                <button type="submit">Generate Public Exchange Token</button>
             </form>
         </div>
         
@@ -205,15 +217,16 @@ async def ui_exchange_form(request: Request):
     })
 
 @app.post("/ui/exchange/request", response_class=HTMLResponse)
-async def ui_request_exchange(request: Request, requester_name: str = Form(...)):
+async def ui_request_exchange(request: Request, msg: Optional[str] = Form(None)):
     """Request a contact exchange via web UI"""
     exchange_id = len(exchanges) + 1
     token = f"exchange-token-{exchange_id}"
     exchanges[exchange_id] = {
         "id": exchange_id,
-        "requester_name": requester_name,
+        "msg": msg,
         "token": token,
-        "created_at": datetime.utcnow().isoformat() + "Z"
+        "created_at": datetime.utcnow().isoformat() + "Z",
+        "unsolicited": False
     }
     
     return templates.TemplateResponse("base.html", {
@@ -223,6 +236,38 @@ async def ui_request_exchange(request: Request, requester_name: str = Form(...))
         <div class="success">
             <p><strong>Token Generated Successfully!</strong></p>
             <p>Share this token with the person you want to exchange contact information with:</p>
+            <p><code style="font-size: 1.2em; padding: 10px; background: #f0f0f0;">{token}</code></p>
+            <p>They can use this token at: <a href="/ui/exchange">/ui/exchange</a></p>
+        </div>
+        <div style="margin-top: 20px;">
+            <a href="/ui/exchange"><button>Back to Exchange</button></a>
+        </div>
+        """
+    })
+
+@app.post("/ui/exchange/public-request", response_class=HTMLResponse)
+async def ui_public_request_exchange(request: Request, public_msg: Optional[str] = Form(None)):
+    """Request a public contact exchange via web UI"""
+    exchange_id = len(exchanges) + 1
+    token = f"public-exchange-token-{exchange_id}"
+    exchanges[exchange_id] = {
+        "id": exchange_id,
+        "msg": public_msg,
+        "token": token,
+        "created_at": datetime.utcnow().isoformat() + "Z",
+        "unsolicited": True
+    }
+    
+    return templates.TemplateResponse("base.html", {
+        "request": request,
+        "header": "Public Exchange Token Generated",
+        "content": f"""
+        <div class="success">
+            <p><strong>Public Token Generated Successfully!</strong></p>
+            <div class="warning">
+                <p><strong>Notice:</strong> This is a public token that anyone can use to connect with you.</p>
+            </div>
+            <p>Share this token or QR code with anyone who wants to connect with you:</p>
             <p><code style="font-size: 1.2em; padding: 10px; background: #f0f0f0;">{token}</code></p>
             <p>They can use this token at: <a href="/ui/exchange">/ui/exchange</a></p>
         </div>
@@ -256,12 +301,30 @@ async def ui_accept_exchange(request: Request, token: str = Form(...)):
             """
         })
     
+    unsolicited_notice = ""
+    if exchange.get("unsolicited"):
+        unsolicited_notice = """
+        <div class="warning">
+            <p><strong>Notice:</strong> This is an unsolicited connection request.</p>
+        </div>
+        """
+    
+    msg_section = ""
+    if exchange.get("msg"):
+        msg_section = f"""
+        <div class="message">
+            <p><strong>Message from requester:</strong></p>
+            <blockquote>{exchange['msg']}</blockquote>
+        </div>
+        """
+    
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "Exchange Contact Information",
         "content": f"""
         <div>
-            <p>You are exchanging contact information with: <strong>{exchange['requester_name']}</strong></p>
+            {unsolicited_notice}
+            {msg_section}
             <p>Please fill in your information below to complete the exchange.</p>
             
             <form method="POST" action="/ui/exchange/submit">
@@ -269,6 +332,9 @@ async def ui_accept_exchange(request: Request, token: str = Form(...)):
                 
                 <label for="your_name">Your Name/Nickname:</label>
                 <input type="text" id="your_name" name="your_name" placeholder="Enter your name or nickname" required>
+                
+                <label for="your_msg">Your Message (optional, max 240 characters):</label>
+                <textarea id="your_msg" name="your_msg" placeholder="Add a message to include with your connection request" maxlength="240" rows="3"></textarea>
                 
                 <label for="perma_url">Your Permanent URL (HTTPS):</label>
                 <input type="url" id="perma_url" name="perma_url" placeholder="https://your-server.com/contact" required>
@@ -290,6 +356,7 @@ async def ui_submit_exchange(
     request: Request,
     token: str = Form(...),
     your_name: str = Form(...),
+    your_msg: Optional[str] = Form(None),
     perma_url: str = Form(...),
     public_key: str = Form(...),
     callback_url: str = Form(...)
@@ -396,12 +463,19 @@ async def ui_connections(request: Request):
             """
         connections_html += "</ul>"
     
+    # Add section for unsolicited connections
+    unsolicited_notice = ""
+    unsolicited_exchanges = [ex for ex in exchanges.values() if ex.get("unsolicited")]
+    if unsolicited_exchanges:
+        unsolicited_notice = "<div class='warning'><p><strong>Notice:</strong> You have received unsolicited connection requests. Please review them carefully.</p></div>"
+    
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "My Connections",
         "content": f"""
         <div>
             <h3>Connection List</h3>
+            {unsolicited_notice}
             {connections_html}
         </div>
         <div style="margin-top: 20px;">

@@ -22,7 +22,7 @@ class TokenRequest(BaseModel):
     """
     Request for a new link+token
     """
-    requester_name: str = Field(..., description="Name or nickname of the requester", min_length=1)
+    msg: Optional[str] = Field(None, description="Optional message to include with the token (max 240 characters)", max_length=240)
 
 class TokenResponse(BaseModel):
     """
@@ -30,7 +30,7 @@ class TokenResponse(BaseModel):
     """
     link: HttpUrl = Field(..., description="URL to access the contact information")
     token: str = Field(..., description="Token for authentication")
-    requester_name: str = Field(..., description="Name or nickname of the requester")
+    msg: Optional[str] = Field(None, description="Optional message included with the token")
 
 class ExchangeRequest(BaseModel):
     """
@@ -38,6 +38,7 @@ class ExchangeRequest(BaseModel):
     """
     token: str = Field(..., description="Token for authentication")
     name: str = Field(..., description="Name or nickname of the requesting party", min_length=1)
+    msg: Optional[str] = Field(None, description="Optional message to include with the connection request (max 240 characters)", max_length=240)
     perma_url: HttpUrl = Field(..., description="Permanent URL for the requesting server")
     public_key: str = Field(..., description="Public key for passkey authentication", min_length=1)
     callback_url: HttpUrl = Field(..., description="URL to send response back to")

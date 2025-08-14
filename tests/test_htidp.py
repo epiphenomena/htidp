@@ -12,7 +12,7 @@ def client():
 
 def test_request_token_valid(client):
     # Test requesting a new token with valid data
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     
     assert response.status_code == 200
@@ -20,25 +20,29 @@ def test_request_token_valid(client):
     
     assert "link" in data
     assert "token" in data
-    assert data["requester_name"] == "Alice"
+    assert data["msg"] == "Hello, I'd like to connect!"
 
 def test_request_token_invalid_name(client):
     # Test requesting a token with invalid name (empty string)
-    response = client.post("/request-token", json={"requester_name": ""})
+    # This test is no longer applicable since TokenRequest doesn't require a name field
+    # We'll test invalid msg field instead
+    response = client.post("/request-token", json={"msg": "a" * 241})  # Exceeds max length
     
     # Should fail validation
     assert response.status_code == 422
 
 def test_request_token_missing_name(client):
     # Test requesting a token with missing name field
+    # This test is no longer applicable since TokenRequest doesn't require a name field
+    # We'll test valid request with no fields instead
     response = client.post("/request-token", json={})
     
-    # Should fail validation
-    assert response.status_code == 422
+    # Should succeed since all fields are optional
+    assert response.status_code == 200
 
 def test_get_exchange_info_json(client):
     # First request a token
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     token = response.json()["token"]
     
@@ -48,12 +52,12 @@ def test_get_exchange_info_json(client):
     data = response.json()
     
     assert "post_url" in data
-    assert "requester_name" in data
-    assert data["requester_name"] == "Alice"
+    assert "msg" in data
+    assert data["msg"] == "Hello, I'd like to connect!"
 
 def test_get_exchange_info_html(client):
     # First request a token
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     token = response.json()["token"]
     
@@ -61,12 +65,11 @@ def test_get_exchange_info_html(client):
     response = client.get(f"/exchange/{token}", headers={"Accept": "text/html"})
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
-    assert "Alice" in response.text
     assert "form" in response.text
 
 def test_get_exchange_info_default(client):
     # First request a token
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     token = response.json()["token"]
     
@@ -76,8 +79,8 @@ def test_get_exchange_info_default(client):
     data = response.json()
     
     assert "post_url" in data
-    assert "requester_name" in data
-    assert data["requester_name"] == "Alice"
+    assert "msg" in data
+    assert data["msg"] == "Hello, I'd like to connect!"
 
 def test_get_exchange_info_invalid_token(client):
     # Try to get exchange info for invalid token
@@ -86,7 +89,7 @@ def test_get_exchange_info_invalid_token(client):
 
 def test_get_exchange_info_used_token(client):
     # First request a token
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     token = response.json()["token"]
     
@@ -94,6 +97,7 @@ def test_get_exchange_info_used_token(client):
     exchange_request = {
         "token": token,
         "name": "Bob",
+        "msg": "Hi Alice, I'd like to connect with you!",
         "perma_url": "https://bob.example.com",
         "public_key": "bob-public-key",
         "callback_url": "https://bob.example.com/callback"
@@ -108,7 +112,7 @@ def test_get_exchange_info_used_token(client):
 
 def test_process_exchange_valid(client):
     # First request a token
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     token = response.json()["token"]
     
@@ -116,6 +120,7 @@ def test_process_exchange_valid(client):
     exchange_request = {
         "token": token,
         "name": "Bob",
+        "msg": "Hi Alice, I'd like to connect with you!",
         "perma_url": "https://bob.example.com",
         "public_key": "bob-public-key",
         "callback_url": "https://bob.example.com/callback"
@@ -127,7 +132,7 @@ def test_process_exchange_valid(client):
 
 def test_process_exchange_invalid_token_mismatch(client):
     # First request a token
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     token = response.json()["token"]
     
@@ -135,6 +140,7 @@ def test_process_exchange_invalid_token_mismatch(client):
     exchange_request = {
         "token": "different-token",
         "name": "Bob",
+        "msg": "Hi Alice, I'd like to connect with you!",
         "perma_url": "https://bob.example.com",
         "public_key": "bob-public-key",
         "callback_url": "https://bob.example.com/callback"
@@ -144,7 +150,7 @@ def test_process_exchange_invalid_token_mismatch(client):
 
 def test_process_exchange_invalid_data(client):
     # First request a token
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     token = response.json()["token"]
     
@@ -158,7 +164,7 @@ def test_process_exchange_invalid_data(client):
 
 def test_process_exchange_invalid_urls(client):
     # First request a token
-    request_data = TokenRequest(requester_name="Alice")
+    request_data = TokenRequest(msg="Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     token = response.json()["token"]
     
@@ -166,12 +172,37 @@ def test_process_exchange_invalid_urls(client):
     exchange_request = {
         "token": token,
         "name": "Bob",
+        "msg": "Hi Alice, I'd like to connect with you!",
         "perma_url": "not-a-url",
         "public_key": "bob-public-key",
         "callback_url": "also-not-a-url"
     }
     response = client.post(f"/exchange/{token}", json=exchange_request)
     assert response.status_code == 422
+
+def test_public_request_token_valid(client):
+    # Test requesting a new token via the public endpoint
+    request_data = TokenRequest(msg="Hello, I found your website and would like to connect!")
+    response = client.post("/public-request-token", json=request_data.model_dump())
+    
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert "link" in data
+    assert "token" in data
+    assert data["msg"] == "Hello, I found your website and would like to connect!"
+
+def test_public_request_token_no_message(client):
+    # Test requesting a new token via the public endpoint without a message
+    request_data = TokenRequest()
+    response = client.post("/public-request-token", json=request_data.model_dump())
+    
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert "link" in data
+    assert "token" in data
+    assert data["msg"] is None
 
 def test_get_contact_info_valid(client):
     # For now, we'll just test the endpoint exists and handles missing contacts properly
@@ -191,8 +222,8 @@ def test_health_check(client):
 # Security tests
 def test_xss_protection_html_escaping(client):
     # Test that HTML responses properly escape user input to prevent XSS
-    # First request a token with a name that contains HTML
-    request_data = TokenRequest(requester_name="<script>alert('xss')</script>Alice")
+    # First request a token with a message that contains HTML
+    request_data = TokenRequest(msg="<script>alert('xss')</script>Hello, I'd like to connect!")
     response = client.post("/request-token", json=request_data.model_dump())
     assert response.status_code == 200
     

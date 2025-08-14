@@ -1,17 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}HTIDP Exchange - {{ requester_name }}{% endblock %}
+{% block title %}HTIDP Exchange{% endblock %}
 
 {% block header %}HTIDP Contact Exchange{% endblock %}
 
 {% block content %}
-<p><strong>{{ requester_name }}</strong> wants to exchange contact information with you.</p>
+{% if unsolicited %}
+<div class="warning">
+    <p><strong>Notice:</strong> This is an unsolicited connection request. Please review carefully before accepting.</p>
+</div>
+{% endif %}
 
-<form method="post" action="/v1/exchange/{{ token }}">
+{% if msg %}
+<div class="message">
+    <p><strong>Message from requester:</strong></p>
+    <blockquote>{{ msg }}</blockquote>
+</div>
+{% endif %}
+
+<p>Please provide your information to exchange contact details.</p>
+
+<form method="post" action="/exchange/{{ token }}">
     <div>
         <label for="name">Your Name/Nickname:</label>
         <input type="text" id="name" name="name" required>
     </div>
+    {% if msg %}
+    <div>
+        <label for="msg">Your Message (optional, max 240 characters):</label>
+        <textarea id="msg" name="msg" maxlength="240" rows="3"></textarea>
+    </div>
+    {% endif %}
     <div>
         <label for="perma_url">Your Permanent URL (HTTPS):</label>
         <input type="url" id="perma_url" name="perma_url" required>

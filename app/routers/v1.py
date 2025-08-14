@@ -15,16 +15,25 @@ router = APIRouter()
 @router.post("/request-token", response_model=TokenResponse)
 async def request_token(token_request: TokenRequest):
     """
-    Request a new link+token for sharing contact information
+    Request a new link+token for sharing contact information (authenticated user)
     """
-    return htidp_service.generate_token(token_request.requester_name)
+    return htidp_service.generate_token(token_request.msg)
+
+@router.post("/public-request-token", response_model=TokenResponse)
+async def public_request_token(token_request: TokenRequest):
+    """
+    Request a new link+token for public/unsolicited sharing
+    This endpoint can be used by anyone to request a connection,
+    such as for QR codes at conferences or website "Connect" links.
+    """
+    return htidp_service.generate_public_token(token_request.msg)
 
 @router.get("/exchange/{token}")
 async def get_exchange_info(request: Request, token: str, accept: str = Header(default="*/*")):
     """
     Get exchange information for a token
     This endpoint returns either HTML or JSON based on the Accept header:
-    - application/json or */*: Returns JSON with URL to POST and requester name
+    - application/json or */*: Returns JSON with URL to POST and requester information
     - text/html: Returns an HTML form for manual exchange
     """
     # First check if this is a valid, unused token
@@ -39,7 +48,9 @@ async def get_exchange_info(request: Request, token: str, accept: str = Header(d
                     request=request,
                     name="exchange_used.html",
                     context={
-                        "requester_name": connection_info["requester_name"]
+                        "requester_name": connection_info["requester_name"],
+                        "requester_msg": connection_info.get("requester_msg"),
+                        "unsolicited": connection_info.get("unsolicited", False)
                     }
                 )
             else:
@@ -54,14 +65,15 @@ async def get_exchange_info(request: Request, token: str, accept: str = Header(d
             name="exchange.html",
             context={
                 "token": token,
-                "requester_name": token_info["requester_name"]
+                "msg": token_info.get("msg"),
+                "unsolicited": token_info.get("unsolicited", False)
             }
         )
     else:
         # Return JSON response (default)
         return {
             "post_url": f"/exchange/{token}",
-            "requester_name": token_info["requester_name"]
+            "msg": token_info.get("msg")
         }
 
 @router.post("/exchange/{token}")
