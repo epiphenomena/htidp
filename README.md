@@ -29,6 +29,14 @@ It is assumed:
 - Users have multiple client applications from which to CRUD their own records in their accounts on their hosts
 - The interaction between a user's clients and their hosts is out of scope
 
+
+The protocol is intended to be always backwards compatible --
+existing endpoints may by extended by including additional data in responses,
+and new endpoints may be added.
+
+The protocol is also intended to support extension by clients and servers.
+
+
 Basic story:
 
 - Alice and Bob decide to share contact information
@@ -80,7 +88,7 @@ The HTID Protocol describes the link+token and the interaction between hosts.
 
 ## Implementation
 
-This repository includes a Python/FastAPI implementation of HTIDP. 
+This repository includes a Python/FastAPI implementation of HTIDP.
 See [README_IMPLEMENTATION.md](README_IMPLEMENTATION.md) for details on how to run and use the implementation.
 
 The project now uses `pyproject.toml` for dependency management and can be installed using [uv](https://github.com/astral-sh/uv) for faster dependency resolution and installation.
