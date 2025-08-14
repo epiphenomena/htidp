@@ -60,7 +60,7 @@ async def get_exchange_info(request: Request, token: str, accept: str = Header(d
     else:
         # Return JSON response (default)
         return {
-            "post_url": f"/v1/exchange/{token}",
+            "post_url": f"/exchange/{token}",
             "requester_name": token_info["requester_name"]
         }
 

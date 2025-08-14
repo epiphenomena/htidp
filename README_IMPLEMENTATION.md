@@ -1,6 +1,6 @@
 # HTIDP - HyperText ID Protocol Implementation
 
-This is a Python/FastAPI implementation of the HTIDP (HyperText ID Protocol) Version 1.
+This is a Python/FastAPI implementation of the HTIDP (HyperText ID Protocol).
 
 ## Features
 
@@ -49,12 +49,12 @@ The server will start on `http://127.0.0.1:8000` by default.
 
 ## API Endpoints
 
-- `POST /v1/request-token` - Request a new link+token for sharing contact information
-- `GET /v1/exchange/{token}` - Get exchange information for a token
-- `POST /v1/exchange/{token}` - Process the exchange of contact information between servers
-- `GET /v1/contact/{contact_id}` - Get contact information with passkey challenge
-- `HEAD /v1/contact/{contact_id}` - Check if contact information has changed since a timestamp
-- `GET /v1/health` - Health check endpoint
+- `POST /request-token` - Request a new link+token for sharing contact information
+- `GET /exchange/{token}` - Get exchange information for a token
+- `POST /exchange/{token}` - Process the exchange of contact information between servers
+- `GET /contact/{contact_id}` - Get contact information with passkey challenge
+- `HEAD /contact/{contact_id}` - Check if contact information has changed since a timestamp
+- `GET /health` - Health check endpoint
 
 ## Examples
 

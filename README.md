@@ -4,9 +4,9 @@ RESTful API protocol for sharing contact information and keeping it up to date
 
 This is a proposed email killer. But it accomplishes the task in stages.
 
-## Version 1 - Plain VCARD, optional addl fields
+## Plain VCARD, optional addl fields
 
-The goal of HTIDP.v1 is to facilitate sharing standard VCARD information
+The goal of HTIDP is to facilitate sharing standard VCARD information
 such that each party controls what contact information they share with whom,
 and can keep their contact information updated.
 
@@ -60,7 +60,7 @@ The HTID Protocol describes the link+token and the interaction between hosts.
   - and a URL for Alice's server to POST the same information back to Bob's server
 - Alice's server receives the POSTed data.
 - Alice's server may use the name/nickname to send a request for confirmation from Alice via Alice's client
-- Alice's server POSTso the given URL the following form-data:
+- Alice's server POSTs to the given URL the following form-data:
   - the token
   - a perma-URL for Bob's server to save and associate with Alice (must be HTTPS)
   - a public key, that may unique to the connection between Alice and Bob (the public portion of a "passkey"), to serve as Alice's passkey to Bob
@@ -80,11 +80,13 @@ The HTID Protocol describes the link+token and the interaction between hosts.
 
 ## Implementation
 
-This repository includes a Python/FastAPI implementation of HTIDP Version 1. 
+This repository includes a Python/FastAPI implementation of HTIDP. 
 See [README_IMPLEMENTATION.md](README_IMPLEMENTATION.md) for details on how to run and use the implementation.
 
-## Version 2 - Use addl fields for PGP public key: encrypt, sign, verify ID
+## Future Enhancements
 
-## Version 3 - WEB-RTC: calls and data exchange
+### Version 2 - Use addl fields for PGP public key: encrypt, sign, verify ID
 
-## Version 4 - Messaging
+### Version 3 - WEB-RTC: calls and data exchange
+
+### Version 4 - Messaging

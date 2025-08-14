@@ -1,6 +1,6 @@
-# HTIDP Version 1 Implementation Summary
+# HTIDP Implementation Summary
 
-This implementation provides a FastAPI-based RESTful API for the HyperText ID Protocol (HTIDP) Version 1, which facilitates sharing contact information and keeping it up to date.
+This implementation provides a FastAPI-based RESTful API for the HyperText ID Protocol (HTIDP), which facilitates sharing contact information and keeping it up to date.
 
 ## Key Features Implemented
 
@@ -18,11 +18,11 @@ This implementation provides a FastAPI-based RESTful API for the HyperText ID Pr
    - Machine-readable JSON for API clients
 
 4. **Contact Exchange Process**:
-   - Request token generation (`POST /v1/request-token`)
-   - Exchange information retrieval (`GET /v1/exchange/{token}`)
-   - Contact information exchange (`POST /v1/exchange/{token}`)
-   - Contact information retrieval (`GET /v1/contact/{contact_id}`)
-   - Update checking (`HEAD /v1/contact/{contact_id}`)
+   - Request token generation (`POST /request-token`)
+   - Exchange information retrieval (`GET /exchange/{token}`)
+   - Contact information exchange (`POST /exchange/{token}`)
+   - Contact information retrieval (`GET /contact/{contact_id}`)
+   - Update checking (`HEAD /contact/{contact_id}`)
 
 5. **Security Considerations**:
    - Passkey authentication framework (public key exchange)
@@ -30,12 +30,12 @@ This implementation provides a FastAPI-based RESTful API for the HyperText ID Pr
 
 ## API Endpoints
 
-- `POST /v1/request-token` - Request a new link+token for sharing contact information
-- `GET /v1/exchange/{token}` - Get exchange information for a token (returns HTML or JSON based on Accept header)
-- `POST /v1/exchange/{token}` - Process the exchange of contact information between servers
-- `GET /v1/contact/{contact_id}` - Get contact information with passkey challenge (returns HTML or JSON based on Accept header)
-- `HEAD /v1/contact/{contact_id}` - Check if contact information has changed since a timestamp
-- `GET /v1/health` - Health check endpoint
+- `POST /request-token` - Request a new link+token for sharing contact information
+- `GET /exchange/{token}` - Get exchange information for a token (returns HTML or JSON based on Accept header)
+- `POST /exchange/{token}` - Process the exchange of contact information between servers
+- `GET /contact/{contact_id}` - Get contact information with passkey challenge (returns HTML or JSON based on Accept header)
+- `HEAD /contact/{contact_id}` - Check if contact information has changed since a timestamp
+- `GET /health` - Health check endpoint
 
 ## Implementation Details
 
@@ -49,7 +49,7 @@ This implementation provides a FastAPI-based RESTful API for the HyperText ID Pr
 
 ## Future Enhancements
 
-This implementation provides a solid foundation for HTIDP v1. Future enhancements could include:
+This implementation provides a solid foundation for HTIDP. Future enhancements could include:
 - Database integration for persistent storage
 - Full passkey authentication implementation
 - Enhanced security features

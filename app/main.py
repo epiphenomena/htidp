@@ -35,8 +35,8 @@ def create_app():
     if os.path.exists(templates_dir):
         app.mount("/templates", StaticFiles(directory=templates_dir), name="templates")
     
-    # Include routers
-    app.include_router(v1.router, prefix="/v1", tags=["v1"])
+    # Include routers without version prefix
+    app.include_router(v1.router)
     
     return app
 
