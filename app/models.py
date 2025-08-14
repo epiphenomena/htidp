@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl, Field
+from pydantic import BaseModel, HttpUrl, Field, validator
 from typing import Optional, Dict, Any
 from datetime import datetime
 
@@ -7,7 +7,7 @@ class VCard(BaseModel):
     Standard VCARD information with optional additional fields
     """
     # Standard VCARD fields
-    full_name: str = Field(..., description="Full name of the person")
+    full_name: str = Field(..., description="Full name of the person", min_length=1)
     organization: Optional[str] = Field(None, description="Organization name")
     title: Optional[str] = Field(None, description="Job title")
     email: Optional[str] = Field(None, description="Email address")
@@ -22,7 +22,7 @@ class TokenRequest(BaseModel):
     """
     Request for a new link+token
     """
-    requester_name: str = Field(..., description="Name or nickname of the requester")
+    requester_name: str = Field(..., description="Name or nickname of the requester", min_length=1)
 
 class TokenResponse(BaseModel):
     """
@@ -37,9 +37,9 @@ class ExchangeRequest(BaseModel):
     Request sent from one server to another during the exchange process
     """
     token: str = Field(..., description="Token for authentication")
-    name: str = Field(..., description="Name or nickname of the requesting party")
+    name: str = Field(..., description="Name or nickname of the requesting party", min_length=1)
     perma_url: HttpUrl = Field(..., description="Permanent URL for the requesting server")
-    public_key: str = Field(..., description="Public key for passkey authentication")
+    public_key: str = Field(..., description="Public key for passkey authentication", min_length=1)
     callback_url: HttpUrl = Field(..., description="URL to send response back to")
 
 class ExchangeResponse(BaseModel):

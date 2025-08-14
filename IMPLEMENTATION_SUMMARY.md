@@ -12,23 +12,28 @@ This implementation provides a FastAPI-based RESTful API for the HyperText ID Pr
    - Standard VCARD fields (full name, organization, title, email, phone, address, website)
    - Optional additional custom fields
 
-3. **Contact Exchange Process**:
+3. **Content Negotiation**:
+   - Returns HTML or JSON based on Accept header
+   - Human-friendly HTML forms for browser-based interaction
+   - Machine-readable JSON for API clients
+
+4. **Contact Exchange Process**:
    - Request token generation (`POST /v1/request-token`)
    - Exchange information retrieval (`GET /v1/exchange/{token}`)
    - Contact information exchange (`POST /v1/exchange/{token}`)
    - Contact information retrieval (`GET /v1/contact/{contact_id}`)
    - Update checking (`HEAD /v1/contact/{contact_id}`)
 
-4. **Security Considerations**:
+5. **Security Considerations**:
    - Passkey authentication framework (public key exchange)
    - Token expiration and single-use validation
 
 ## API Endpoints
 
 - `POST /v1/request-token` - Request a new link+token for sharing contact information
-- `GET /v1/exchange/{token}` - Get exchange information for a token
+- `GET /v1/exchange/{token}` - Get exchange information for a token (returns HTML or JSON based on Accept header)
 - `POST /v1/exchange/{token}` - Process the exchange of contact information between servers
-- `GET /v1/contact/{contact_id}` - Get contact information with passkey challenge
+- `GET /v1/contact/{contact_id}` - Get contact information with passkey challenge (returns HTML or JSON based on Accept header)
 - `HEAD /v1/contact/{contact_id}` - Check if contact information has changed since a timestamp
 - `GET /v1/health` - Health check endpoint
 
@@ -40,6 +45,7 @@ This implementation provides a FastAPI-based RESTful API for the HyperText ID Pr
 - Comprehensive test suite
 - Docker support for easy deployment
 - Proper error handling and validation
+- Content negotiation based on Accept headers
 
 ## Future Enhancements
 

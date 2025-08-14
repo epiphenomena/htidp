@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 from contextlib import asynccontextmanager
 
 from app.routers import v1
@@ -18,14 +20,20 @@ def create_app():
         lifespan=lifespan
     )
     
-    # Add CORS middleware
+    # Add CORS middleware with more restrictive settings
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["*"],  # In production, specify exact origins
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "HEAD"],
         allow_headers=["*"],
+        expose_headers=["Last-Modified"],
     )
+    
+    # Mount templates directory for static files if needed
+    templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+    if os.path.exists(templates_dir):
+        app.mount("/templates", StaticFiles(directory=templates_dir), name="templates")
     
     # Include routers
     app.include_router(v1.router, prefix="/v1", tags=["v1"])

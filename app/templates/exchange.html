@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}HTIDP Exchange - {{ requester_name }}{% endblock %}
+
+{% block header %}HTIDP Contact Exchange{% endblock %}
+
+{% block content %}
+<p><strong>{{ requester_name }}</strong> wants to exchange contact information with you.</p>
+
+<form method="post" action="/v1/exchange/{{ token }}">
+    <div>
+        <label for="name">Your Name/Nickname:</label>
+        <input type="text" id="name" name="name" required>
+    </div>
+    <div>
+        <label for="perma_url">Your Permanent URL (HTTPS):</label>
+        <input type="url" id="perma_url" name="perma_url" required>
+    </div>
+    <div>
+        <label for="public_key">Your Public Key:</label>
+        <textarea id="public_key" name="public_key" required rows="4"></textarea>
+    </div>
+    <div>
+        <label for="callback_url">Callback URL (where to send response):</label>
+        <input type="url" id="callback_url" name="callback_url" required>
+    </div>
+    <input type="hidden" name="token" value="{{ token }}">
+    <button type="submit">Exchange Contact Information</button>
+</form>
+{% endblock %}

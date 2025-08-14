@@ -8,6 +8,9 @@ This is a Python/FastAPI implementation of the HTIDP (HyperText ID Protocol) Ver
 - Token-based exchange mechanism
 - VCARD standard compliance with optional additional fields
 - Passkey authentication for secure information exchange
+- Content negotiation (HTML/JSON) based on Accept headers
+- XSS protection through template escaping
+- CORS support
 
 ## Installation
 
@@ -52,6 +55,15 @@ The server will start on `http://127.0.0.1:8000` by default.
 - `GET /v1/contact/{contact_id}` - Get contact information with passkey challenge
 - `HEAD /v1/contact/{contact_id}` - Check if contact information has changed since a timestamp
 - `GET /v1/health` - Health check endpoint
+
+## Examples
+
+The `examples/` directory contains:
+
+1. A standalone HTML/JavaScript client demo (`client.html`)
+2. An example server implementation (`example_server.py`)
+
+See [examples/README.md](examples/README.md) for details on how to run the examples.
 
 ## Testing
 
