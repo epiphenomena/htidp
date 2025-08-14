@@ -16,7 +16,7 @@ class HTIDPService:
         self.contacts: Dict[str, dict] = {}
         self.connections: Dict[str, dict] = {}  # Store connections between parties
         
-    def generate_token(self, msg: Optional[str] = None) -> TokenResponse:
+    def generate_token(self) -> TokenResponse:
         """
         Generate a new link+token for sharing contact information
         """
@@ -24,7 +24,6 @@ class HTIDPService:
         link = f"https://example.com/exchange/{token}"
         
         self.tokens[token] = {
-            "msg": msg,
             "created_at": datetime.utcnow(),
             "used": False,
             "unsolicited": False  # Track if this was a public/unsolicited request
@@ -32,11 +31,10 @@ class HTIDPService:
         
         return TokenResponse(
             link=link,
-            token=token,
-            msg=msg
+            token=token
         )
         
-    def generate_public_token(self, msg: Optional[str] = None) -> TokenResponse:
+    def generate_public_token(self) -> TokenResponse:
         """
         Generate a new link+token for public/unsolicited sharing
         """
@@ -44,7 +42,6 @@ class HTIDPService:
         link = f"https://example.com/public-exchange/{token}"
         
         self.tokens[token] = {
-            "msg": msg,
             "created_at": datetime.utcnow(),
             "used": False,
             "unsolicited": True  # Mark as public/unsolicited request
@@ -52,8 +49,7 @@ class HTIDPService:
         
         return TokenResponse(
             link=link,
-            token=token,
-            msg=msg
+            token=token
         )
         
     def validate_token(self, token: str) -> Optional[dict]:

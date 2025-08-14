@@ -17,7 +17,7 @@ async def request_token(token_request: TokenRequest):
     """
     Request a new link+token for sharing contact information (authenticated user)
     """
-    return htidp_service.generate_token(token_request.msg)
+    return htidp_service.generate_token()
 
 @router.post("/public-request-token", response_model=TokenResponse)
 async def public_request_token(token_request: TokenRequest):
@@ -26,7 +26,7 @@ async def public_request_token(token_request: TokenRequest):
     This endpoint can be used by anyone to request a connection,
     such as for QR codes at conferences or website "Connect" links.
     """
-    return htidp_service.generate_public_token(token_request.msg)
+    return htidp_service.generate_public_token()
 
 @router.get("/exchange/{token}")
 async def get_exchange_info(request: Request, token: str, accept: str = Header(default="*/*")):
@@ -65,15 +65,13 @@ async def get_exchange_info(request: Request, token: str, accept: str = Header(d
             name="exchange.html",
             context={
                 "token": token,
-                "msg": token_info.get("msg"),
                 "unsolicited": token_info.get("unsolicited", False)
             }
         )
     else:
         # Return JSON response (default)
         return {
-            "post_url": f"/exchange/{token}",
-            "msg": token_info.get("msg")
+            "post_url": f"/exchange/{token}"
         }
 
 @router.post("/exchange/{token}")
@@ -108,18 +106,43 @@ async def get_contact_info(request: Request, contact_id: str, accept: str = Head
     if not contact_info:
         raise HTTPException(status_code=404, detail="Contact not found")
     
+    # Check if client specifically requested jCard format
+    if "application/vcard+json" in accept:
+        # Return jCard format
+        jcard = contact_info.vcard.to_jcard()
+        return JSONResponse(content=jcard)
+    
+    # Check if client specifically requested hCard format
+    if "text/vcard" in accept:
+        # Return vCard format (traditional vCard text format)
+        # For simplicity, we'll return a basic vCard string
+        vcard_text = f"BEGIN:VCARD\\nVERSION:4.0\\nFN:{contact_info.vcard.full_name}\\n"
+        if contact_info.vcard.organization:
+            vcard_text += f"ORG:{contact_info.vcard.organization}\\n"
+        if contact_info.vcard.email:
+            vcard_text += f"EMAIL:{contact_info.vcard.email}\\n"
+        if contact_info.vcard.phone:
+            vcard_text += f"TEL:{contact_info.vcard.phone}\\n"
+        vcard_text += "END:VCARD"
+        return Response(content=vcard_text, media_type="text/vcard")
+    
     # For demonstration, we'll return the same data in both formats
     # In a real implementation, HTML might show a user-friendly view
     if "text/html" in accept:
+        # Return hCard formatted HTML
+        hcard_html = contact_info.vcard.to_hcard_html()
         return templates.TemplateResponse(
             request=request,
             name="contact.html",
             context={
                 "vcard": contact_info.vcard,
-                "last_updated": contact_info.last_updated
+                "last_updated": contact_info.last_updated,
+                "hcard_html": hcard_html
             }
         )
     else:
+        # Return JSON response (default) - still return our ContactInfoResponse
+        # but client can also request jCard format specifically
         return contact_info
 
 @router.head("/contact/{contact_id}")

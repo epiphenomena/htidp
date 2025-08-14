@@ -11,13 +11,6 @@
 </div>
 {% endif %}
 
-{% if msg %}
-<div class="message">
-    <p><strong>Message from requester:</strong></p>
-    <blockquote>{{ msg }}</blockquote>
-</div>
-{% endif %}
-
 <p>Please provide your information to exchange contact details.</p>
 
 <form method="post" action="/exchange/{{ token }}">
@@ -25,12 +18,10 @@
         <label for="name">Your Name/Nickname:</label>
         <input type="text" id="name" name="name" required>
     </div>
-    {% if msg %}
     <div>
         <label for="msg">Your Message (optional, max 240 characters):</label>
         <textarea id="msg" name="msg" maxlength="240" rows="3"></textarea>
     </div>
-    {% endif %}
     <div>
         <label for="perma_url">Your Permanent URL (HTTPS):</label>
         <input type="url" id="perma_url" name="perma_url" required>

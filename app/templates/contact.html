@@ -5,6 +5,10 @@
 {% block header %}Contact Information{% endblock %}
 
 {% block content %}
+<!-- hCard formatted contact information -->
+{% if hcard_html %}
+{{ hcard_html|safe }}
+{% else %}
 <div>
     <h2>{{ vcard.full_name }}</h2>
     
@@ -32,6 +36,7 @@
     <p><strong>Website:</strong> <a href="{{ vcard.website }}" target="_blank">{{ vcard.website }}</a></p>
     {% endif %}
 </div>
+{% endif %}
 
 <p><small>Last updated: {{ last_updated }}</small></p>
 {% endblock %}

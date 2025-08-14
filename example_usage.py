@@ -11,11 +11,11 @@ def demo_flow():
     print("HTIDP Demo Flow")
     print("==============")
     
-    # Step 1: Alice requests a token with a message
-    print("\n1. Alice requests a token with a message...")
+    # Step 1: Alice requests a token
+    print("\n1. Alice requests a token...")
     token_response = requests.post(
         f"{BASE_URL}/request-token",
-        json={"msg": "Hi Bob, I'd like to connect with you!"}
+        json={}
     )
     
     if token_response.status_code != 200:
@@ -39,7 +39,6 @@ def demo_flow():
     
     exchange_data = exchange_response.json()
     print(f"Post URL: {exchange_data['post_url']}")
-    print(f"Message: {exchange_data['msg']}")
     
     # Step 3: Show HTML response for browser users
     print("\n3. HTML response for browser users...")
@@ -67,7 +66,7 @@ def public_demo_flow():
     print("\n1. Someone requests a token via the public endpoint...")
     token_response = requests.post(
         f"{BASE_URL}/public-request-token",
-        json={"msg": "I found your website and would like to connect!"}
+        json={}
     )
     
     if token_response.status_code != 200:

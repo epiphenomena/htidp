@@ -183,9 +183,6 @@ async def ui_exchange_form(request: Request):
             <p>Generate a token to share your contact information with another person.</p>
             
             <form method="POST" action="/ui/exchange/request">
-                <label for="msg">Your Message (optional):</label>
-                <textarea id="msg" name="msg" placeholder="Add a message to include with your connection request" maxlength="240" rows="3"></textarea>
-                
                 <button type="submit">Generate Exchange Token</button>
             </form>
         </div>
@@ -195,9 +192,6 @@ async def ui_exchange_form(request: Request):
             <p>Generate a token that anyone can use to connect with you (e.g., for QR codes).</p>
             
             <form method="POST" action="/ui/exchange/public-request">
-                <label for="public_msg">Your Message (optional):</label>
-                <textarea id="public_msg" name="public_msg" placeholder="Add a message for public connection requests" maxlength="240" rows="3"></textarea>
-                
                 <button type="submit">Generate Public Exchange Token</button>
             </form>
         </div>
@@ -217,13 +211,12 @@ async def ui_exchange_form(request: Request):
     })
 
 @app.post("/ui/exchange/request", response_class=HTMLResponse)
-async def ui_request_exchange(request: Request, msg: Optional[str] = Form(None)):
+async def ui_request_exchange(request: Request):
     """Request a contact exchange via web UI"""
     exchange_id = len(exchanges) + 1
     token = f"exchange-token-{exchange_id}"
     exchanges[exchange_id] = {
         "id": exchange_id,
-        "msg": msg,
         "token": token,
         "created_at": datetime.utcnow().isoformat() + "Z",
         "unsolicited": False
@@ -246,13 +239,12 @@ async def ui_request_exchange(request: Request, msg: Optional[str] = Form(None))
     })
 
 @app.post("/ui/exchange/public-request", response_class=HTMLResponse)
-async def ui_public_request_exchange(request: Request, public_msg: Optional[str] = Form(None)):
+async def ui_public_request_exchange(request: Request):
     """Request a public contact exchange via web UI"""
     exchange_id = len(exchanges) + 1
     token = f"public-exchange-token-{exchange_id}"
     exchanges[exchange_id] = {
         "id": exchange_id,
-        "msg": public_msg,
         "token": token,
         "created_at": datetime.utcnow().isoformat() + "Z",
         "unsolicited": True
