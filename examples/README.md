@@ -28,6 +28,24 @@ python -m examples.example_server
 
 The server will start on http://127.0.0.1:8001 by default.
 
+## Web-based UI
+
+The example server now includes a comprehensive web-based UI that allows users to:
+
+1. **Manage Contact Information** (`/ui/contact`)
+   - Create and update your own contact details
+   - View your current contact information
+
+2. **Exchange Contacts** (`/ui/exchange`)
+   - Generate tokens to share your contact information
+   - Accept tokens from others to exchange contact details
+
+3. **View Connections** (`/ui/connections`)
+   - See a list of all your exchanged contacts
+   - View detailed information for each connection
+
+To use the web-based UI, simply navigate to the root URL of the example server (http://127.0.0.1:8001) and use the provided links to access the different features.
+
 ## Usage
 
 1. Start the main HTIDP server:
@@ -40,6 +58,8 @@ The server will start on http://127.0.0.1:8001 by default.
    python -m examples.example_server
    ```
 
-3. Open `client.html` in a web browser to interact with the APIs
+3. Access the web-based UI at http://127.0.0.1:8001
+
+4. Alternatively, open `client.html` in a web browser to interact with the APIs using the standalone client
 
 Note: The example implementations are for demonstration purposes only and do not include full security features that would be required in a production environment.
