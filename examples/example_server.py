@@ -40,13 +40,35 @@ def create_sample_vcard():
     Create a sample vCard for demo purposes
     """
     vcard = vobject.vCard()
-    vcard.add('fn').value = "John Doe"
-    vcard.add('org').value = "Example Corp"
-    vcard.add('title').value = "Software Engineer"
-    vcard.add('email').value = "john.doe@example.com"
-    vcard.add('tel').value = "+1-555-123-4567"
-    vcard.add('adr').value = "123 Main St, Anytown, USA"
-    vcard.add('url').value = "https://example.com"
+    vcard.add('fn')
+    vcard.fn.value = "John Doe"
+    
+    vcard.add('org')
+    vcard.org.value = ["Example Corp"]
+    
+    vcard.add('title')
+    vcard.title.value = "Software Engineer"
+    
+    vcard.add('email')
+    vcard.email.value = "john.doe@example.com"
+    
+    vcard.add('tel')
+    vcard.tel.value = "+1-555-123-4567"
+    
+    vcard.add('adr')
+    vcard.adr.value = vobject.vcard.Address(
+        street="123 Main St", 
+        city="Anytown", 
+        code="12345", 
+        country="USA"
+    )
+    
+    vcard.add('url')
+    vcard.url.value = "https://example.com"
+    
+    vcard.add('version')
+    vcard.version.value = "4.0"
+    
     return vcard.serialize()
 
 my_contact_vcard = create_sample_vcard()
@@ -65,13 +87,13 @@ async def root(request: Request):
         <div>
             <h2>Welcome to the HTIDP Example Server</h2>
             <p>This server demonstrates the HTIDP protocol with a web-based UI.</p>
-            
+
             <div style="margin: 20px 0;">
                 <a href="/ui/contact"><button>Manage My Contact</button></a>
                 <a href="/ui/exchange"><button>Exchange Contacts</button></a>
                 <a href="/ui/connections"><button>View Connections</button></a>
             </div>
-            
+
             <h3>API Endpoints</h3>
             <ul>
                 <li><a href="/docs">API Documentation</a></li>
@@ -86,7 +108,7 @@ async def ui_contact_form(request: Request):
     """Web UI for managing contact information"""
     # Parse the vCard to display current values
     vcard = vobject.readOne(my_contact["vcard_data"])
-    
+
     # Extract values with defaults
     fn = getattr(vcard, 'fn', type('obj', (object,), {'value': ''})()).value
     org = getattr(vcard, 'org', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'org') else ''
@@ -95,7 +117,7 @@ async def ui_contact_form(request: Request):
     tel = getattr(vcard, 'tel', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'tel') else ''
     adr = getattr(vcard, 'adr', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'adr') else ''
     url = getattr(vcard, 'url', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'url') else ''
-    
+
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "My Contact Information",
@@ -103,28 +125,28 @@ async def ui_contact_form(request: Request):
         <form method="POST" action="/ui/contact">
             <label for="full_name">Full Name:</label>
             <input type="text" id="full_name" name="full_name" value="{fn}" required>
-            
+
             <label for="organization">Organization:</label>
             <input type="text" id="organization" name="organization" value="{org}">
-            
+
             <label for="title">Title:</label>
             <input type="text" id="title" name="title" value="{title}">
-            
+
             <label for="email">Email:</label>
             <input type="email" id="email" name="email" value="{email}">
-            
+
             <label for="phone">Phone:</label>
             <input type="text" id="phone" name="phone" value="{tel}">
-            
+
             <label for="address">Address:</label>
             <input type="text" id="address" name="address" value="{adr}">
-            
+
             <label for="website">Website:</label>
             <input type="url" id="website" name="website" value="{url}">
-            
+
             <button type="submit">Update Contact</button>
         </form>
-        
+
         <div style="margin-top: 20px;">
             <a href="/ui/contact/view"><button>View My Contact</button></a>
         </div>
@@ -145,21 +167,32 @@ async def ui_update_contact(
     """Update contact information via web UI"""
     # Create a new vCard
     vcard = vobject.vCard()
-    vcard.add('fn').value = full_name
-    vcard.add('version').value = "4.0"
+    vcard.add('fn')
+    vcard.fn.value = full_name
+    
+    vcard.add('version')
+    vcard.version.value = "4.0"
     
     if organization:
-        vcard.add('org').value = organization
+        vcard.add('org')
+        vcard.org.value = [organization]
     if title:
-        vcard.add('title').value = title
+        vcard.add('title')
+        vcard.title.value = title
     if email:
-        vcard.add('email').value = email
+        vcard.add('email')
+        vcard.email.value = email
     if phone:
-        vcard.add('tel').value = phone
+        vcard.add('tel')
+        vcard.tel.value = phone
     if address:
-        vcard.add('adr').value = address
+        vcard.add('adr')
+        # For simplicity, we'll store the address as a single string
+        # In a real implementation, you might want to parse this into components
+        vcard.adr.value = vobject.vcard.Address(street=address)
     if website:
-        vcard.add('url').value = website
+        vcard.add('url')
+        vcard.url.value = website
     
     my_contact["vcard_data"] = vcard.serialize()
     my_contact["last_updated"] = datetime.utcnow().isoformat() + "Z"
@@ -183,33 +216,26 @@ async def ui_view_contact(request: Request):
     """View my contact information"""
     # Parse vCard and create hCard HTML
     vcard = vobject.readOne(my_contact["vcard_data"])
-    
+
     # Create hCard HTML
-    hcard_html = '<div class="vcard">
-'
+    hcard_html = '<div class="vcard">'
+
     if hasattr(vcard, 'fn'):
-        hcard_html += f'  <span class="fn">{vcard.fn.value}</span>
-'
+        hcard_html += f'  <span class="fn">{vcard.fn.value}</span>'
     if hasattr(vcard, 'org'):
-        hcard_html += f'  <div class="org">{vcard.org.value}</div>
-'
+        hcard_html += f'  <div class="org">{vcard.org.value}</div>'
     if hasattr(vcard, 'title'):
-        hcard_html += f'  <div class="title">{vcard.title.value}</div>
-'
+        hcard_html += f'  <div class="title">{vcard.title.value}</div>'
     if hasattr(vcard, 'email'):
-        hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>
-'
+        hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>'
     if hasattr(vcard, 'tel'):
-        hcard_html += f'  <div class="tel">{vcard.tel.value}</div>
-'
+        hcard_html += f'  <div class="tel">{vcard.tel.value}</div>'
     if hasattr(vcard, 'adr'):
-        hcard_html += f'  <div class="adr">{vcard.adr.value}</div>
-'
+        hcard_html += f'  <div class="adr">{vcard.adr.value}</div>'
     if hasattr(vcard, 'url'):
-        hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>
-'
+        hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>'
     hcard_html += '</div>'
-    
+
     return templates.TemplateResponse("contact.html", {
         "request": request,
         "vcard_data": my_contact["vcard_data"],
@@ -222,7 +248,7 @@ async def get_contact(contact_id: str):
     """Get contact information by ID"""
     if contact_id not in contacts:
         raise HTTPException(status_code=404, detail="Contact not found")
-    
+
     return contacts[contact_id]
 
 @app.post("/contact")
@@ -243,29 +269,29 @@ async def ui_exchange_form(request: Request):
         <div>
             <h3>Request Contact Exchange (Authenticated)</h3>
             <p>Generate a token to share your contact information with another person.</p>
-            
+
             <form method="POST" action="/ui/exchange/request">
                 <button type="submit">Generate Exchange Token</button>
             </form>
         </div>
-        
+
         <div style="margin-top: 30px;">
             <h3>Public Exchange Request</h3>
             <p>Generate a token that anyone can use to connect with you (e.g., for QR codes).</p>
-            
+
             <form method="POST" action="/ui/exchange/public-request">
                 <button type="submit">Generate Public Exchange Token</button>
             </form>
         </div>
-        
+
         <div style="margin-top: 30px;">
             <h3>Accept Contact Exchange</h3>
             <p>Use a token you received to exchange contact information.</p>
-            
+
             <form method="POST" action="/ui/exchange/accept">
                 <label for="token">Exchange Token:</label>
                 <input type="text" id="token" name="token" placeholder="Enter the token you received" required>
-                
+
                 <button type="submit">Accept Exchange</button>
             </form>
         </div>
@@ -283,7 +309,7 @@ async def ui_request_exchange(request: Request):
         "created_at": datetime.utcnow().isoformat() + "Z",
         "unsolicited": False
     }
-    
+
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "Exchange Token Generated",
@@ -311,7 +337,7 @@ async def ui_public_request_exchange(request: Request):
         "created_at": datetime.utcnow().isoformat() + "Z",
         "unsolicited": True
     }
-    
+
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "Public Exchange Token Generated",
@@ -340,7 +366,7 @@ async def ui_accept_exchange(request: Request, token: str = Form(...)):
         if ex.get("token") == token:
             exchange = ex
             break
-    
+
     if not exchange:
         return templates.TemplateResponse("base.html", {
             "request": request,
@@ -354,7 +380,7 @@ async def ui_accept_exchange(request: Request, token: str = Form(...)):
             </div>
             """
         })
-    
+
     unsolicited_notice = ""
     if exchange.get("unsolicited"):
         unsolicited_notice = """
@@ -362,7 +388,7 @@ async def ui_accept_exchange(request: Request, token: str = Form(...)):
             <p><strong>Notice:</strong> This is an unsolicited connection request.</p>
         </div>
         """
-    
+
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "Exchange Contact Information",
@@ -370,25 +396,25 @@ async def ui_accept_exchange(request: Request, token: str = Form(...)):
         <div>
             {unsolicited_notice}
             <p>Please fill in your information below to complete the exchange.</p>
-            
+
             <form method="POST" action="/ui/exchange/submit">
                 <input type="hidden" name="token" value="{token}">
-                
+
                 <label for="your_name">Your Name/Nickname:</label>
                 <input type="text" id="your_name" name="your_name" placeholder="Enter your name or nickname" required>
-                
+
                 <label for="your_msg">Your Message (optional, max 240 characters):</label>
                 <textarea id="your_msg" name="your_msg" placeholder="Add a message to include with your connection request" maxlength="240" rows="3"></textarea>
-                
+
                 <label for="perma_url">Your Permanent URL (HTTPS):</label>
                 <input type="url" id="perma_url" name="perma_url" placeholder="https://your-server.com/contact" required>
-                
+
                 <label for="public_key">Your Public Key:</label>
                 <textarea id="public_key" name="public_key" placeholder="Enter your public key" rows="4" required></textarea>
-                
+
                 <label for="callback_url">Callback URL (where to send response):</label>
                 <input type="url" id="callback_url" name="callback_url" placeholder="https://your-server.com/callback" required>
-                
+
                 <button type="submit">Submit Exchange</button>
             </form>
         </div>
@@ -432,8 +458,10 @@ async def ui_submit_exchange(
     contact_id = len(contacts) + 1
     # Create a simple vCard for the new contact
     vcard = vobject.vCard()
-    vcard.add('fn').value = your_name
-    vcard.add('version').value = "4.0"
+    vcard.add('fn')
+    vcard.fn.value = your_name
+    vcard.add('version')
+    vcard.version.value = "4.0"
     
     contacts[contact_id] = {
         "id": contact_id,
@@ -478,7 +506,7 @@ async def get_exchange(token: str):
                 "post_url": "/exchange/submit",
                 "requester_name": ex.get("requester_name", "Unknown User")
             }
-    
+
     raise HTTPException(status_code=404, detail="Exchange token not found")
 
 @app.post("/exchange/{token}")
@@ -490,7 +518,7 @@ async def process_exchange(token: str, exchange_data: dict):
             # In a real implementation, we would process the exchange
             # For this demo, we'll just return success
             return {"status": "success", "message": "Exchange processed successfully"}
-    
+
     raise HTTPException(status_code=404, detail="Exchange token not found")
 
 @app.get("/ui/connections", response_class=HTMLResponse)
@@ -507,22 +535,22 @@ async def ui_connections(request: Request):
                 name = vcard.fn.value if hasattr(vcard, 'fn') else f"Contact {contact_id}"
             except:
                 name = f"Contact {contact_id}"
-                
+
             connections_html += f"""
             <li>
-                <strong>{name}</strong> 
+                <strong>{name}</strong>
                 (ID: {contact_id})
                 <a href="/ui/connections/{contact_id}"><button style="margin-left: 10px;">View</button></a>
             </li>
             """
         connections_html += "</ul>"
-    
+
     # Add section for unsolicited connections
     unsolicited_notice = ""
     unsolicited_exchanges = [ex for ex in exchanges.values() if ex.get("unsolicited")]
     if unsolicited_exchanges:
         unsolicited_notice = "<div class='warning'><p><strong>Notice:</strong> You have received unsolicited connection requests. Please review them carefully.</p></div>"
-    
+
     return templates.TemplateResponse("base.html", {
         "request": request,
         "header": "My Connections",
@@ -554,41 +582,33 @@ async def ui_view_connection(request: Request, contact_id: int):
             </div>
             """
         })
-    
+
     contact = contacts[str(contact_id)]
-    
+
     # Parse vCard and create hCard HTML
     try:
         vcard = vobject.readOne(contact["vcard_data"])
-        
+
         # Create hCard HTML
-        hcard_html = '<div class="vcard">
-'
+        hcard_html = '<div class="vcard">'
         if hasattr(vcard, 'fn'):
-            hcard_html += f'  <span class="fn">{vcard.fn.value}</span>
-'
+            hcard_html += f'  <span class="fn">{vcard.fn.value}</span>'
         if hasattr(vcard, 'org'):
-            hcard_html += f'  <div class="org">{vcard.org.value}</div>
-'
+            hcard_html += f'  <div class="org">{vcard.org.value}</div>'
         if hasattr(vcard, 'title'):
-            hcard_html += f'  <div class="title">{vcard.title.value}</div>
-'
+            hcard_html += f'  <div class="title">{vcard.title.value}</div>'
         if hasattr(vcard, 'email'):
-            hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>
-'
+            hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>'
         if hasattr(vcard, 'tel'):
-            hcard_html += f'  <div class="tel">{vcard.tel.value}</div>
-'
+            hcard_html += f'  <div class="tel">{vcard.tel.value}</div>'
         if hasattr(vcard, 'adr'):
-            hcard_html += f'  <div class="adr">{vcard.adr.value}</div>
-'
+            hcard_html += f'  <div class="adr">{vcard.adr.value}</div>'
         if hasattr(vcard, 'url'):
-            hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>
-'
+            hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>'
         hcard_html += '</div>'
     except:
         hcard_html = "<p>Error parsing contact information.</p>"
-    
+
     return templates.TemplateResponse("contact.html", {
         "request": request,
         "vcard_data": contact["vcard_data"],
@@ -601,7 +621,7 @@ async def check_contact_update(contact_id: str, request: Request):
     """Check if contact information has been updated"""
     if contact_id not in contacts:
         raise HTTPException(status_code=404, detail="Contact not found")
-    
+
     response = JSONResponse(content={})
     response.headers["Last-Modified"] = "Wed, 21 Oct 2025 07:28:00 GMT"
     return response
@@ -611,9 +631,9 @@ def main():
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8001, help="Port to bind to")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
-    
+
     args = parser.parse_args()
-    
+
     uvicorn.run(
         "examples.example_server:app",
         host=args.host,
