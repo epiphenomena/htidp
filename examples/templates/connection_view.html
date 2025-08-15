@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}View Connection - HTIDP Example Server{% endblock %}
+
+{% block header %}Connection Information{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="error">
+    <p>{{ error }}</p>
+</div>
+<div style="margin-top: 20px;">
+    <a href="/ui/connections"><button>Back to Connections</button></a>
+</div>
+{% else %}
+<!-- hCard formatted contact information -->
+{% if hcard_html %}
+{{ hcard_html|safe }}
+{% else %}
+<div>
+    <p>Contact information is available in vCard format.</p>
+</div>
+{% endif %}
+
+<p><small>Last updated: {{ last_updated }}</small></p>
+
+<div style="margin-top: 20px;">
+    <a href="/ui/connections"><button>Back to Connections</button></a>
+</div>
+{% endif %}
+{% endblock %}

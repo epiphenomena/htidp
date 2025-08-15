@@ -22,7 +22,7 @@ app = FastAPI(
 )
 
 # Set up templates
-templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "app", "templates")
+templates_dir = os.path.join(os.path.dirname(__file__), "templates")
 templates = Jinja2Templates(directory=templates_dir)
 
 # Serve static files (including our client.html)
@@ -80,27 +80,8 @@ my_contact = {
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    return templates.TemplateResponse("base.html", {
-        "request": request,
-        "header": "HTIDP Example Server",
-        "content": """
-        <div>
-            <h2>Welcome to the HTIDP Example Server</h2>
-            <p>This server demonstrates the HTIDP protocol with a web-based UI.</p>
-
-            <div style="margin: 20px 0;">
-                <a href="/ui/contact"><button>Manage My Contact</button></a>
-                <a href="/ui/exchange"><button>Exchange Contacts</button></a>
-                <a href="/ui/connections"><button>View Connections</button></a>
-            </div>
-
-            <h3>API Endpoints</h3>
-            <ul>
-                <li><a href="/docs">API Documentation</a></li>
-                <li><a href="/examples/client.html">Client Demo</a></li>
-            </ul>
-        </div>
-        """
+    return templates.TemplateResponse("index.html", {
+        "request": request
     })
 
 @app.get("/ui/contact", response_class=HTMLResponse)
@@ -111,46 +92,22 @@ async def ui_contact_form(request: Request):
 
     # Extract values with defaults
     fn = getattr(vcard, 'fn', type('obj', (object,), {'value': ''})()).value
-    org = getattr(vcard, 'org', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'org') else ''
+    org = getattr(vcard, 'org', type('obj', (object,), {'value': ['']})()).value[0] if hasattr(vcard, 'org') and vcard.org.value else ''
     title = getattr(vcard, 'title', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'title') else ''
     email = getattr(vcard, 'email', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'email') else ''
     tel = getattr(vcard, 'tel', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'tel') else ''
-    adr = getattr(vcard, 'adr', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'adr') else ''
+    adr = getattr(vcard, 'adr', type('obj', (object,), {'value': type('obj', (object,), {'street': ''})()})()).value.street if hasattr(vcard, 'adr') and hasattr(vcard.adr.value, 'street') else ''
     url = getattr(vcard, 'url', type('obj', (object,), {'value': ''})()).value if hasattr(vcard, 'url') else ''
-
-    return templates.TemplateResponse("base.html", {
+    
+    return templates.TemplateResponse("contact_form.html", {
         "request": request,
-        "header": "My Contact Information",
-        "content": f"""
-        <form method="POST" action="/ui/contact">
-            <label for="full_name">Full Name:</label>
-            <input type="text" id="full_name" name="full_name" value="{fn}" required>
-
-            <label for="organization">Organization:</label>
-            <input type="text" id="organization" name="organization" value="{org}">
-
-            <label for="title">Title:</label>
-            <input type="text" id="title" name="title" value="{title}">
-
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" value="{email}">
-
-            <label for="phone">Phone:</label>
-            <input type="text" id="phone" name="phone" value="{tel}">
-
-            <label for="address">Address:</label>
-            <input type="text" id="address" name="address" value="{adr}">
-
-            <label for="website">Website:</label>
-            <input type="url" id="website" name="website" value="{url}">
-
-            <button type="submit">Update Contact</button>
-        </form>
-
-        <div style="margin-top: 20px;">
-            <a href="/ui/contact/view"><button>View My Contact</button></a>
-        </div>
-        """
+        "full_name": fn,
+        "organization": org,
+        "title": title,
+        "email": email,
+        "phone": tel,
+        "address": adr,
+        "website": url
     })
 
 @app.post("/ui/contact", response_class=HTMLResponse)
@@ -197,18 +154,8 @@ async def ui_update_contact(
     my_contact["vcard_data"] = vcard.serialize()
     my_contact["last_updated"] = datetime.utcnow().isoformat() + "Z"
     
-    return templates.TemplateResponse("base.html", {
-        "request": request,
-        "header": "Contact Updated",
-        "content": """
-        <div class="success">
-            <p>Your contact information has been successfully updated!</p>
-        </div>
-        <div style="margin-top: 20px;">
-            <a href="/ui/contact"><button>Back to Contact Form</button></a>
-            <a href="/ui/contact/view"><button>View My Contact</button></a>
-        </div>
-        """
+    return templates.TemplateResponse("contact_updated.html", {
+        "request": request
     })
 
 @app.get("/ui/contact/view", response_class=HTMLResponse)
@@ -218,25 +165,24 @@ async def ui_view_contact(request: Request):
     vcard = vobject.readOne(my_contact["vcard_data"])
 
     # Create hCard HTML
-    hcard_html = '<div class="vcard">'
-
+    hcard_html = '<div class="vcard">\n'
     if hasattr(vcard, 'fn'):
-        hcard_html += f'  <span class="fn">{vcard.fn.value}</span>'
+        hcard_html += f'  <span class="fn">{vcard.fn.value}</span>\n'
     if hasattr(vcard, 'org'):
-        hcard_html += f'  <div class="org">{vcard.org.value}</div>'
+        hcard_html += f'  <div class="org">{vcard.org.value[0]}</div>\n'
     if hasattr(vcard, 'title'):
-        hcard_html += f'  <div class="title">{vcard.title.value}</div>'
+        hcard_html += f'  <div class="title">{vcard.title.value}</div>\n'
     if hasattr(vcard, 'email'):
-        hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>'
+        hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>\n'
     if hasattr(vcard, 'tel'):
-        hcard_html += f'  <div class="tel">{vcard.tel.value}</div>'
+        hcard_html += f'  <div class="tel">{vcard.tel.value}</div>\n'
     if hasattr(vcard, 'adr'):
-        hcard_html += f'  <div class="adr">{vcard.adr.value}</div>'
+        hcard_html += f'  <div class="adr">{vcard.adr.value.street}</div>\n'
     if hasattr(vcard, 'url'):
-        hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>'
+        hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>\n'
     hcard_html += '</div>'
-
-    return templates.TemplateResponse("contact.html", {
+    
+    return templates.TemplateResponse("contact_view.html", {
         "request": request,
         "vcard_data": my_contact["vcard_data"],
         "last_updated": my_contact["last_updated"],
@@ -262,40 +208,8 @@ async def create_contact(contact: dict):
 @app.get("/ui/exchange", response_class=HTMLResponse)
 async def ui_exchange_form(request: Request):
     """Web UI for initiating contact exchange"""
-    return templates.TemplateResponse("base.html", {
-        "request": request,
-        "header": "Exchange Contacts",
-        "content": """
-        <div>
-            <h3>Request Contact Exchange (Authenticated)</h3>
-            <p>Generate a token to share your contact information with another person.</p>
-
-            <form method="POST" action="/ui/exchange/request">
-                <button type="submit">Generate Exchange Token</button>
-            </form>
-        </div>
-
-        <div style="margin-top: 30px;">
-            <h3>Public Exchange Request</h3>
-            <p>Generate a token that anyone can use to connect with you (e.g., for QR codes).</p>
-
-            <form method="POST" action="/ui/exchange/public-request">
-                <button type="submit">Generate Public Exchange Token</button>
-            </form>
-        </div>
-
-        <div style="margin-top: 30px;">
-            <h3>Accept Contact Exchange</h3>
-            <p>Use a token you received to exchange contact information.</p>
-
-            <form method="POST" action="/ui/exchange/accept">
-                <label for="token">Exchange Token:</label>
-                <input type="text" id="token" name="token" placeholder="Enter the token you received" required>
-
-                <button type="submit">Accept Exchange</button>
-            </form>
-        </div>
-        """
+    return templates.TemplateResponse("exchange_form.html", {
+        "request": request
     })
 
 @app.post("/ui/exchange/request", response_class=HTMLResponse)
@@ -310,20 +224,11 @@ async def ui_request_exchange(request: Request):
         "unsolicited": False
     }
 
-    return templates.TemplateResponse("base.html", {
+    return templates.TemplateResponse("token_generated.html", {
         "request": request,
         "header": "Exchange Token Generated",
-        "content": f"""
-        <div class="success">
-            <p><strong>Token Generated Successfully!</strong></p>
-            <p>Share this token with the person you want to exchange contact information with:</p>
-            <p><code style="font-size: 1.2em; padding: 10px; background: #f0f0f0;">{token}</code></p>
-            <p>They can use this token at: <a href="/ui/exchange">/ui/exchange</a></p>
-        </div>
-        <div style="margin-top: 20px;">
-            <a href="/ui/exchange"><button>Back to Exchange</button></a>
-        </div>
-        """
+        "token": token,
+        "is_public": False
     })
 
 @app.post("/ui/exchange/public-request", response_class=HTMLResponse)
@@ -338,23 +243,11 @@ async def ui_public_request_exchange(request: Request):
         "unsolicited": True
     }
 
-    return templates.TemplateResponse("base.html", {
+    return templates.TemplateResponse("token_generated.html", {
         "request": request,
         "header": "Public Exchange Token Generated",
-        "content": f"""
-        <div class="success">
-            <p><strong>Public Token Generated Successfully!</strong></p>
-            <div class="warning">
-                <p><strong>Notice:</strong> This is a public token that anyone can use to connect with you.</p>
-            </div>
-            <p>Share this token or QR code with anyone who wants to connect with you:</p>
-            <p><code style="font-size: 1.2em; padding: 10px; background: #f0f0f0;">{token}</code></p>
-            <p>They can use this token at: <a href="/ui/exchange">/ui/exchange</a></p>
-        </div>
-        <div style="margin-top: 20px;">
-            <a href="/ui/exchange"><button>Back to Exchange</button></a>
-        </div>
-        """
+        "token": token,
+        "is_public": True
     })
 
 @app.post("/ui/exchange/accept", response_class=HTMLResponse)
@@ -368,57 +261,15 @@ async def ui_accept_exchange(request: Request, token: str = Form(...)):
             break
 
     if not exchange:
-        return templates.TemplateResponse("base.html", {
+        return templates.TemplateResponse("exchange_accept.html", {
             "request": request,
-            "header": "Exchange Error",
-            "content": """
-            <div class="error">
-                <p>Invalid or expired token. Please check the token and try again.</p>
-            </div>
-            <div style="margin-top: 20px;">
-                <a href="/ui/exchange"><button>Back to Exchange</button></a>
-            </div>
-            """
+            "error": "Invalid or expired token. Please check the token and try again."
         })
 
-    unsolicited_notice = ""
-    if exchange.get("unsolicited"):
-        unsolicited_notice = """
-        <div class="warning">
-            <p><strong>Notice:</strong> This is an unsolicited connection request.</p>
-        </div>
-        """
-
-    return templates.TemplateResponse("base.html", {
+    return templates.TemplateResponse("exchange_accept.html", {
         "request": request,
-        "header": "Exchange Contact Information",
-        "content": f"""
-        <div>
-            {unsolicited_notice}
-            <p>Please fill in your information below to complete the exchange.</p>
-
-            <form method="POST" action="/ui/exchange/submit">
-                <input type="hidden" name="token" value="{token}">
-
-                <label for="your_name">Your Name/Nickname:</label>
-                <input type="text" id="your_name" name="your_name" placeholder="Enter your name or nickname" required>
-
-                <label for="your_msg">Your Message (optional, max 240 characters):</label>
-                <textarea id="your_msg" name="your_msg" placeholder="Add a message to include with your connection request" maxlength="240" rows="3"></textarea>
-
-                <label for="perma_url">Your Permanent URL (HTTPS):</label>
-                <input type="url" id="perma_url" name="perma_url" placeholder="https://your-server.com/contact" required>
-
-                <label for="public_key">Your Public Key:</label>
-                <textarea id="public_key" name="public_key" placeholder="Enter your public key" rows="4" required></textarea>
-
-                <label for="callback_url">Callback URL (where to send response):</label>
-                <input type="url" id="callback_url" name="callback_url" placeholder="https://your-server.com/callback" required>
-
-                <button type="submit">Submit Exchange</button>
-            </form>
-        </div>
-        """
+        "token": token,
+        "unsolicited": exchange.get("unsolicited", False)
     })
 
 @app.post("/ui/exchange/submit", response_class=HTMLResponse)
@@ -438,21 +289,13 @@ async def ui_submit_exchange(
         if ex.get("token") == token:
             exchange = ex
             break
-    
+
     if not exchange:
-        return templates.TemplateResponse("base.html", {
+        return templates.TemplateResponse("exchange_completed.html", {
             "request": request,
-            "header": "Exchange Error",
-            "content": """
-            <div class="error">
-                <p>Invalid or expired token. Please check the token and try again.</p>
-            </div>
-            <div style="margin-top: 20px;">
-                <a href="/ui/exchange"><button>Back to Exchange</button></a>
-            </div>
-            """
+            "error": "Invalid or expired token. Please check the token and try again."
         })
-    
+
     # In a real implementation, we would send the data to the callback URL
     # For this demo, we'll just store the contact
     contact_id = len(contacts) + 1
@@ -462,26 +305,15 @@ async def ui_submit_exchange(
     vcard.fn.value = your_name
     vcard.add('version')
     vcard.version.value = "4.0"
-    
+
     contacts[contact_id] = {
         "id": contact_id,
         "vcard_data": vcard.serialize(),
         "last_updated": datetime.utcnow().isoformat() + "Z"
     }
-    
-    return templates.TemplateResponse("base.html", {
-        "request": request,
-        "header": "Exchange Completed",
-        "content": """
-        <div class="success">
-            <p><strong>Exchange Submitted Successfully!</strong></p>
-            <p>Your contact information has been exchanged with the other party.</p>
-        </div>
-        <div style="margin-top: 20px;">
-            <a href="/ui/exchange"><button>Back to Exchange</button></a>
-            <a href="/ui/connections"><button>View Connections</button></a>
-        </div>
-        """
+
+    return templates.TemplateResponse("exchange_completed.html", {
+        "request": request
     })
 
 @app.post("/exchange")
@@ -549,38 +381,21 @@ async def ui_connections(request: Request):
     unsolicited_notice = ""
     unsolicited_exchanges = [ex for ex in exchanges.values() if ex.get("unsolicited")]
     if unsolicited_exchanges:
-        unsolicited_notice = "<div class='warning'><p><strong>Notice:</strong> You have received unsolicited connection requests. Please review them carefully.</p></div>"
+        unsolicited_notice = True
 
-    return templates.TemplateResponse("base.html", {
+    return templates.TemplateResponse("connections.html", {
         "request": request,
-        "header": "My Connections",
-        "content": f"""
-        <div>
-            <h3>Connection List</h3>
-            {unsolicited_notice}
-            {connections_html}
-        </div>
-        <div style="margin-top: 20px;">
-            <a href="/ui/exchange"><button>Exchange New Contact</button></a>
-        </div>
-        """
+        "connections_html": connections_html,
+        "unsolicited_notice": unsolicited_notice
     })
 
 @app.get("/ui/connections/{contact_id}", response_class=HTMLResponse)
 async def ui_view_connection(request: Request, contact_id: int):
     """View a specific connection"""
     if str(contact_id) not in contacts:
-        return templates.TemplateResponse("base.html", {
+        return templates.TemplateResponse("connection_view.html", {
             "request": request,
-            "header": "Connection Not Found",
-            "content": """
-            <div class="error">
-                <p>The requested connection was not found.</p>
-            </div>
-            <div style="margin-top: 20px;">
-                <a href="/ui/connections"><button>Back to Connections</button></a>
-            </div>
-            """
+            "error": "The requested connection was not found."
         })
 
     contact = contacts[str(contact_id)]
@@ -590,26 +405,26 @@ async def ui_view_connection(request: Request, contact_id: int):
         vcard = vobject.readOne(contact["vcard_data"])
 
         # Create hCard HTML
-        hcard_html = '<div class="vcard">'
+        hcard_html = '<div class="vcard">\n'
         if hasattr(vcard, 'fn'):
-            hcard_html += f'  <span class="fn">{vcard.fn.value}</span>'
+            hcard_html += f'  <span class="fn">{vcard.fn.value}</span>\n'
         if hasattr(vcard, 'org'):
-            hcard_html += f'  <div class="org">{vcard.org.value}</div>'
+            hcard_html += f'  <div class="org">{vcard.org.value[0]}</div>\n'
         if hasattr(vcard, 'title'):
-            hcard_html += f'  <div class="title">{vcard.title.value}</div>'
+            hcard_html += f'  <div class="title">{vcard.title.value}</div>\n'
         if hasattr(vcard, 'email'):
-            hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>'
+            hcard_html += f'  <a class="email" href="mailto:{vcard.email.value}">{vcard.email.value}</a>\n'
         if hasattr(vcard, 'tel'):
-            hcard_html += f'  <div class="tel">{vcard.tel.value}</div>'
+            hcard_html += f'  <div class="tel">{vcard.tel.value}</div>\n'
         if hasattr(vcard, 'adr'):
-            hcard_html += f'  <div class="adr">{vcard.adr.value}</div>'
+            hcard_html += f'  <div class="adr">{vcard.adr.value.street}</div>\n'
         if hasattr(vcard, 'url'):
-            hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>'
+            hcard_html += f'  <a class="url" href="{vcard.url.value}">{vcard.url.value}</a>\n'
         hcard_html += '</div>'
     except:
         hcard_html = "<p>Error parsing contact information.</p>"
 
-    return templates.TemplateResponse("contact.html", {
+    return templates.TemplateResponse("connection_view.html", {
         "request": request,
         "vcard_data": contact["vcard_data"],
         "last_updated": contact["last_updated"],
