@@ -2,7 +2,7 @@ import uvicorn
 import argparse
 
 
-from main import create_app
+from .main import create_app
 
 def main():
     parser = argparse.ArgumentParser(description="HTIDP Server")

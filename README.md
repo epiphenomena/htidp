@@ -46,28 +46,34 @@ Basic story:
   - via NFC or bluetooth
   - assuming it is simple enough: by writing it down or spelling it out loud
 - Bob uses one of his clients to submit the link+token to one of his hosts
+- Bob and Alice's servers use the HTIDP protocol to share/store information necessary to access current contact information
 
 The HTID Protocol describes the link+token and the interaction between hosts.
 
+
+
+
+- Alice's server records the token along with the timestamp of the request, and any other data useful for filtering incoming connection requests.
 - Bob's host/server receives the link+token.
   - The link is a syntactically valid url for an HTTPS resource with no query parameters
     - It is intended that the url is not required to be kept secret
-    -
-  - The token is string containing only url-safe characters.
+  - The token is string containing only url-safe characters. Bob's server records the token and related data so that later action on the connection request can be matched.
 - Bob's server GETs the url, following any redirects
   - The GET request may use the Accept header to prefer JSON before HTML responses
 - Whatever server ultimately processes the request returns either an html form or a JSON object containing:
   - the URL to POST the form or data to
   - a name or nickname selected by Alice
-- Bob's server may use the name field to send a request for confirmation from Bob via Bob's client
+  - an optional msg (240 character max length) from Alice for possible display to Bob
+- Bob's server may use the name and msg fields to send a request for confirmation from Bob via Bob's client
 - Bob's server POSTs to the given URL the following form-data:
   - the token
   - Bob's selected name/nickname
+  - an optional msg (240 characters max long) to potentially be displayed to Alice
   - a perma-URL for Alice's server to save and associate with Bob (must be HTTPS)
   - a public key, that may unique to the connection between Alice and Bob, to serve as Bob's passkey to Alice
   - and a URL for Alice's server to POST the same information back to Bob's server
-- Alice's server receives the POSTed data.
-- Alice's server may use the name/nickname to send a request for confirmation from Alice via Alice's client
+- Alice's server receives the POSTed data, and verifies that the token is valid. The token is removed from the set of open tokens
+- Alice's server may use the name/nickname and msg to send a request for confirmation from Alice via Alice's client
 - Alice's server POSTs to the given URL the following form-data:
   - the token
   - a perma-URL for Bob's server to save and associate with Alice (must be HTTPS)
@@ -76,7 +82,7 @@ The HTID Protocol describes the link+token and the interaction between hosts.
   - Bob's name/nickname
   - Bob's perma-URL
   - Bob's public key
-- Bob's server stores
+- Bob's server removes the token from the set of open tokens and stores
   - Alice's name/nickname
   - Alice's perma-URL
   - Alice's public key
