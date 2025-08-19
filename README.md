@@ -47,6 +47,8 @@ Basic story:
   - assuming it is simple enough: by writing it down or spelling it out loud
 - Bob uses one of his clients to submit the link+token to one of his hosts
 - Bob and Alice's servers use the HTIDP protocol to share/store information necessary to access current contact information
+- Alice's email client refreshes the cached value for Bob's email address when requested after the cached value expires
+- Bob's phone app refreshes the cached value for Alice's phone number when requested post expiry.
 
 The HTID Protocol describes the link+token and the interaction between hosts.
 
@@ -63,7 +65,7 @@ The HTID Protocol describes the link+token and the interaction between hosts.
 - Whatever server ultimately processes the request returns either an html form or a JSON object containing:
   - the URL to POST the form or data to
   - a name or nickname selected by Alice
-  - an optional msg (240 character max length) from Alice for possible display to Bob
+  - an optional msg (utf-8 max length 240 characters) from Alice for possible display to Bob
 - Bob's server may use the name and msg fields to send a request for confirmation from Bob via Bob's client
 - Bob's server POSTs to the given URL the following form-data:
   - the token
