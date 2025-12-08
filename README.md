@@ -2,11 +2,21 @@
 
 RESTful API protocol for sharing contact information and keeping it up to date
 
+<https://jmap.io/spec-core.html>
+
 This is a proposed email killer. But it accomplishes the task in stages.
 
-## Plain VCARD, optional addl fields
+Although there are versions of the protocol / API, backwards compatibility is required.
+And capabilities should always be discoverable and flexible.
+The server's responses should contain all of the information needed for a client
+to determine what capabilities exist and which endpoints to GET/POST
+with what information in order to exercise those capabilities.
+Clients should simply ignore any capabilities that the client does not support.
+Therefore, neither the URLs nor the data are versioned.
 
-The goal of HTIDP is to facilitate sharing standard VCARD information
+## Goals
+
+The goal of HTIDP v1 is to facilitate sharing standard VCARD information
 such that each party controls what contact information they share with whom,
 and can keep their contact information updated.
 
@@ -52,6 +62,22 @@ Basic story:
 
 The HTID Protocol describes the link+token and the interaction between hosts.
 
+## Version 0: Connection
+
+Establish a connection between Alice and Bob. Root URL: any valid URL after following any redirects.
+
+- GET: root ->
+  - Challenge: id=challenge. Text contents
+  - HTML form:
+    - clientid = any string but preferably a uuid
+    - challenge reponse: the challenge encrypted with the public key associated with the client id (proves that the client knows id and private key)
+  - POSTing the form returns response not defined by version 1. This response is where the rest of the versions pick up. The point of v0 is that it can serve as the foundation of other protocols requiring a connection to be established.
+- GET root/invite ->
+  -
+
+## Version 1: Plain VCARD, optional addl fields
+
+- GET
 
 
 
@@ -99,7 +125,7 @@ The HTID Protocol describes the link+token and the interaction between hosts.
 This repository includes a Python/FastAPI implementation of HTIDP.
 See [README_IMPLEMENTATION.md](README_IMPLEMENTATION.md) for details on how to run and use the implementation.
 
-The project now uses `pyproject.toml` for dependency management and can be installed using [uv](https://github.com/astral-sh/uv) for faster dependency resolution and installation.
+The project uses `pyproject.toml` and [uv](https://github.com/astral-sh/uv) for dependency management, python venv management, and python execution.
 
 ## Future Enhancements
 
