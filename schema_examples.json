@@ -1,0 +1,38 @@
+{
+  "identity_object": {
+    "https://htidp.org/core/vcard#fn": "Alice Smith",
+    "https://htidp.org/core/vcard#photo": "https://alice.com/photos/profile.jpg",
+    "https://htidp.org/core/vcard#note": "Building decentralized identity systems."
+  },
+  "handshake_request": {
+    "requester_id": "https://bob.org/profile",
+    "timestamp": "2025-12-09T10:00:00Z",
+    "intro_text": "Hi Alice, I'd like to connect. We met at the decentralized web conference last week.",
+    "public_key": "Ed25519;base64;lCa2J+M0/iT/KPSBq2gM3MjT7g0+xLOgex9nbfy1g0I=",
+    "signature": "Ed25519;base64;SIGNATURE_OF_THE_SHA256_HASH_OF_CANONICAL_JSON_OF_THE_REQUEST_MINUS_SIGNATURE_FIELD"
+  },
+  "handshake_response_accepted": {
+    "status": "accepted",
+    "token": "zANjQPpE9yG2L2j2RqA4sA8pG7c8sB9v",
+    "links": [
+      {
+        "rel": "profile",
+        "href": "https://alice.com/connections/bob/profile"
+      },
+      {
+        "rel": "feed",
+        "href": "https://alice.com/connections/bob/feed"
+      }
+    ]
+  },
+  "handshake_response_pending": {
+    "status": "pending",
+    "token": null,
+    "links": [
+      {
+        "rel": "self",
+        "href": "https://alice.com/handshakes/12345"
+      }
+    ]
+  }
+}

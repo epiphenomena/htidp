@@ -1,48 +1,9 @@
-This is a wise choice. **Go (Golang)** is significantly better for a reference implementation than Zig. It is readable, widely understood, garbage-collected (safer for reference logic), and has a production-grade standard library for HTTP and JSON.
-
-Here is the revised **System Preamble** and the **Granular Prompt Strategy**. I have broken the "Build the Server" and "Build the Client" tasks into much smaller, atomic units that an agent can complete successfully in a single pass.
-
-### **Part 1: The AI Agent Preamble**
-
-*Replace the previous preamble with this version.*
-
-***
-
-**[START PREAMBLE]**
-
-**PROJECT CONTEXT: HTIDP (HyperText Identity Protocol)**
-You are the Lead Architect and Developer for **HTIDP**, a decentralized, web-native identity protocol.
-
-**CORE PHILOSOPHY:**
-1.  **Identity is a URL:** Users connect to servers (`https://alice.com`), not devices.
-2.  **HATEOAS Discovery:** Beyond `/.well-known/htidp`, never hardcode paths. Clients must follow JSON links.
-3.  **Polyglot Extensibility:** Data keys are URLs (Namespaces). Clients ignore keys they don't understand.
-4.  **Privacy by Default:** Connections are unique. Data is pulled (polled), not pushed.
-5.  **Delegated Trust:** Organizations can sign credentials for employees, and employees can inherit connection authorization from the organization.
-
-**TECH STACK:**
-* **Specification:** OpenAPI / JSON Schema.
-* **Reference Server:** **Go (Golang)**. Standard library `net/http` preferred over heavy frameworks.
-* **Reference Client:** Vanilla HTML/JS (PWA).
-* **Crypto:** Ed25519 for signing/verification.
-
-**YOUR GOAL:**
-Build the specification, the Go reference server, and the PWA client step-by-step. Focus on modularity and strict adherence to the protocol's discovery rules.
-
-**[END PREAMBLE]**
-
-***
-
-### **Part 2: The Detailed Prompt Breakdown**
-
-I have exploded the previous 6 prompts into **12 granular steps**. This ensures the agent doesn't hallucinate complexity or skip error handling.
-
 #### **Phase 1: The Specification (The Truth Source)**
 
 **Prompt 1: Core Data Structures**
 > **Task:** Define the JSON Data Models for HTIDP (No server code yet).
 > **Requirements:**
-> 1.  Define the **Identity Object** (The Profile). Use the namespace `https://htidp.org/ns/vcard` for fields: `fn` (Full Name), `photo`, `note`.
+> 1.  Define the **Identity Object** (The Profile). Use the namespace `https://htidp.org/cored/vcard` for fields: `fn` (Full Name), `photo`, `note`.
 > 2.  Define the **Handshake Request**. Fields: `requester_id` (URL), `timestamp`, `intro_text` (max 280 chars), `public_key` (Base64), `signature`.
 > 3.  Define the **Handshake Response**. Fields: `status` (pending/accepted), `token` (if accepted), `links` (array of rel/href).
 > 4.  Output a JSON file `schema_examples.json` containing valid example objects for both.
