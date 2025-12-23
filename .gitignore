@@ -54,3 +54,9 @@ docs/_build/
 
 # mypy
 .mypy_cache/
+
+# Go
+/htidp-server
+*.exe
+*.test
+*.prof
