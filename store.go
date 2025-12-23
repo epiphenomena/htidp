@@ -16,12 +16,14 @@ const (
 
 // Connection represents a relationship between this server and a requester.
 type Connection struct {
-	ID           string
-	RequesterURL string
-	IntroText    string
-	PublicKey    string
-	Status       ConnectionStatus
-	AccessToken  string
+	ID          string
+	RequesterID string
+	Timestamp   string
+	IntroText   string
+	PublicKey   string
+	Signature   string
+	Status      ConnectionStatus
+	AccessToken string
 }
 
 // ConnectionStore is a thread-safe in-memory storage for connections.

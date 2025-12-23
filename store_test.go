@@ -10,7 +10,7 @@ func TestConnectionStore(t *testing.T) {
 	connID := "test-id"
 	conn := Connection{
 		ID:           connID,
-		RequesterURL: "https://example.com",
+		RequesterID:  "https://example.com",
 		Status:       StatusPending,
 	}
 
