@@ -238,8 +238,7 @@ func handshakeStatusHandler(w http.ResponseWriter, r *http.Request, config *Conf
 			Links: []Link{
 				{
 					Rel:  "profile",
-					// For now, constructing a dummy profile link as we don't have detailed structure for it yet
-					Href: fmt.Sprintf("%s/connections/%s/profile", config.Hostname, conn.ID),
+					Href: fmt.Sprintf("%s/api/me", config.Hostname),
 				},
 			},
 		}
@@ -257,6 +256,49 @@ func handshakeStatusHandler(w http.ResponseWriter, r *http.Request, config *Conf
 		}
 		json.NewEncoder(w).Encode(response)
 	}
+}
+
+// RequireToken is a middleware that checks for a valid Bearer token.
+func RequireToken(next http.HandlerFunc, store *ConnectionStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			return
+		}
+
+		token := parts[1]
+		_, ok := store.GetByToken(token)
+		if !ok {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
+// meHandler handles requests to /api/me.
+func meHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	identity := map[string]string{
+		"https://htidp.org/core/vcard#fn":    "Alice Smith",
+		"https://htidp.org/core/vcard#photo": "https://alice.com/photos/profile.jpg",
+		"https://htidp.org/core/vcard#note":  "Building decentralized identity systems.",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(identity)
 }
 
 func main() {
@@ -285,6 +327,8 @@ func main() {
 	http.HandleFunc("/handshakes/", func(w http.ResponseWriter, r *http.Request) {
 		handshakeStatusHandler(w, r, config, store)
 	})
+
+	http.HandleFunc("/api/me", RequireToken(meHandler, store))
 
 	http.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
 		apiV1Handler(w, r, config)

@@ -78,6 +78,18 @@ func (s *ConnectionStore) ListPending() []Connection {
 	return pending
 }
 
+// GetByToken retrieves a connection by its access token.
+func (s *ConnectionStore) GetByToken(token string) (Connection, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, conn := range s.connections {
+		if conn.AccessToken == token {
+			return conn, true
+		}
+	}
+	return Connection{}, false
+}
+
 // GenerateToken returns a secure random string (URL-safe base64).
 func GenerateToken() (string, error) {
 	b := make([]byte, 24) // 24 bytes becomes 32 chars in base64
