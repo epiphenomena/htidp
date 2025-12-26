@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -81,7 +82,7 @@ func apiV1Handler(w http.ResponseWriter, r *http.Request, config *Config) {
 				Href: fmt.Sprintf("%s/api/v1", config.Hostname),
 			},
 			{
-				Rel:     "https://htidp.org/rel/handshake",
+				Rel:     "handshake",
 				Href:    fmt.Sprintf("%s/api/v1/handshake", config.Hostname),
 				Methods: []string{"POST"},
 			},
@@ -302,8 +303,18 @@ func meHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	
+	hostname := os.Getenv("HOSTNAME")
+	if hostname == "" {
+		hostname = "http://localhost:" + port
+	}
+
 	config := &Config{
-		Hostname: "http://localhost:8080",
+		Hostname: hostname,
 	}
 	store := NewConnectionStore()
 
@@ -334,8 +345,8 @@ func main() {
 		apiV1Handler(w, r, config)
 	})
 
-	log.Println("Starting server on localhost:8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	log.Printf("Starting server on port %s\n", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("could not start server: %s\n", err)
 	}
 }
