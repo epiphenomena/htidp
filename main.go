@@ -110,8 +110,16 @@ func handshakeHandler(w http.ResponseWriter, r *http.Request, config *Config, st
 		return
 	}
 
-	// TODO: Verify signature.
-	// Crucial: Ignore the signature verification for this step.
+	// Reconstruct the signed message
+	// For this reference implementation, we concatenate fields in a deterministic order:
+	// requester_id + timestamp + intro_text + public_key
+	message := req.RequesterID + req.Timestamp + req.IntroText + req.PublicKey
+
+	// Verify signature
+	if err := VerifySignature(req.PublicKey, message, req.Signature); err != nil {
+		http.Error(w, "Invalid signature: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Save the request to the store with status Pending.
 	// We generate a unique ID for the handshake.

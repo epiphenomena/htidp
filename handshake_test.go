@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -13,13 +15,34 @@ func TestHandshakeHandler(t *testing.T) {
 	config := &Config{Hostname: "http://localhost:8080"}
 	store := NewConnectionStore()
 
+	// Generate keys for the requester (Bob)
+	pubKey, privKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("Failed to generate keys: %v", err)
+	}
+
+	pubKeyStr := FormatKey(pubKey)
+
+	// Prepare payload data
+	requesterID := "https://bob.org/profile"
+	timestamp := "2025-12-09T10:00:00Z"
+	introText := "Hi Alice, I'd like to connect."
+
+	// Reconstruct message as server expects
+	message := requesterID + timestamp + introText + pubKeyStr
+
+	// Sign the hash of the message
+	hashed := sha256.Sum256([]byte(message))
+	signatureBytes := ed25519.Sign(privKey, hashed[:])
+	signatureStr := FormatKey(signatureBytes)
+
 	// Test case 1: Valid request
 	payload := map[string]string{
-		"requester_id": "https://bob.org/profile",
-		"timestamp":    "2025-12-09T10:00:00Z",
-		"intro_text":   "Hi Alice, I'd like to connect.",
-		"public_key":   "Ed25519;base64;dummy",
-		"signature":    "Ed25519;base64;dummy",
+		"requester_id": requesterID,
+		"timestamp":    timestamp,
+		"intro_text":   introText,
+		"public_key":   pubKeyStr,
+		"signature":    signatureStr,
 	}
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest("POST", "/api/v1/handshake", bytes.NewBuffer(body))
@@ -29,7 +52,7 @@ func TestHandshakeHandler(t *testing.T) {
 
 	resp := w.Result()
 	if resp.StatusCode != http.StatusAccepted {
-		t.Errorf("Expected status 202 Accepted, got %d", resp.StatusCode)
+		t.Errorf("Expected status 202 Accepted, got %d. Body: %s", resp.StatusCode, w.Body.String())
 	}
 
 	var respBody HandshakeResponsePending
@@ -48,13 +71,6 @@ func TestHandshakeHandler(t *testing.T) {
 	}
 
 	// Verify store
-	// We don't have direct access to the ID generated inside the handler to check the store directly by key,
-	// but we can check if count is 1 or iterate.
-	// Since store.connections is unexported map, we can't iterate it from test easily unless we export a Len() method or similar, 
-	// or use reflection, or just rely on the fact that we got a success response and the code calls Save.
-	// Wait, Store methods are exported. Get(id) is exported.
-	// We can extract ID from the link in response.
-	// Response link href: "http://localhost:8080/handshakes/<ID>"
 	href := respBody.Links[0].Href
 	parts := strings.Split(href, "/")
 	id := parts[len(parts)-1]
@@ -67,7 +83,29 @@ func TestHandshakeHandler(t *testing.T) {
 		t.Errorf("Expected RequesterID %s, got %s", payload["requester_id"], conn.RequesterID)
 	}
 
-	// Test case 2: Intro text too long
+	// Test case 2: Invalid signature
+	badSigBytes := make([]byte, len(signatureBytes))
+	copy(badSigBytes, signatureBytes)
+	badSigBytes[0] ^= 0xFF // Flip bits
+
+	payloadBad := map[string]string{
+		"requester_id": requesterID,
+		"timestamp":    timestamp,
+		"intro_text":   introText,
+		"public_key":   pubKeyStr,
+		"signature":    FormatKey(badSigBytes),
+	}
+	bodyBad, _ := json.Marshal(payloadBad)
+	reqBad := httptest.NewRequest("POST", "/api/v1/handshake", bytes.NewBuffer(bodyBad))
+	wBad := httptest.NewRecorder()
+
+	handshakeHandler(wBad, reqBad, config, store)
+
+	if wBad.Result().StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400 Bad Request for invalid signature, got %d", wBad.Result().StatusCode)
+	}
+
+	// Test case 3: Intro text too long
 	longIntro := strings.Repeat("a", 281)
 	payloadInvalid := map[string]string{
 		"requester_id": "https://bob.org/profile",

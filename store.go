@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
 	"sync"
@@ -26,16 +27,26 @@ type Connection struct {
 	AccessToken string
 }
 
-// ConnectionStore is a thread-safe in-memory storage for connections.
+// ConnectionStore is a thread-safe in-memory storage for connections and server identity.
 type ConnectionStore struct {
-	mu          sync.RWMutex
-	connections map[string]Connection
+	mu              sync.RWMutex
+	connections     map[string]Connection
+	ServerPublicKey ed25519.PublicKey
+	ServerPrivateKey ed25519.PrivateKey
 }
 
-// NewConnectionStore initializes a new ConnectionStore.
+// NewConnectionStore initializes a new ConnectionStore and generates server keys.
 func NewConnectionStore() *ConnectionStore {
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		// In a real app, we might handle this better, but panic is acceptable for startup failure here
+		panic("failed to generate server keys: " + err.Error())
+	}
+
 	return &ConnectionStore{
-		connections: make(map[string]Connection),
+		connections:      make(map[string]Connection),
+		ServerPublicKey:  pub,
+		ServerPrivateKey: priv,
 	}
 }
 
