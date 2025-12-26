@@ -54,6 +54,19 @@ func (s *ConnectionStore) Get(id string) (Connection, bool) {
 	return conn, ok
 }
 
+// ListPending returns all connections with status Pending.
+func (s *ConnectionStore) ListPending() []Connection {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var pending []Connection
+	for _, conn := range s.connections {
+		if conn.Status == StatusPending {
+			pending = append(pending, conn)
+		}
+	}
+	return pending
+}
+
 // GenerateToken returns a secure random string (URL-safe base64).
 func GenerateToken() (string, error) {
 	b := make([]byte, 24) // 24 bytes becomes 32 chars in base64

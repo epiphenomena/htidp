@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
 
 // Config holds the server configuration.
@@ -43,6 +44,13 @@ type HandshakeResponsePending struct {
 	Status string  `json:"status"`
 	Token  *string `json:"token"`
 	Links  []Link  `json:"links"`
+}
+
+// HandshakeResponseAccepted defines the response for an accepted handshake.
+type HandshakeResponseAccepted struct {
+	Status string `json:"status"`
+	Token  string `json:"token"`
+	Links  []Link `json:"links"`
 }
 
 // wellKnownHandler handles requests to /.well-known/htidp.
@@ -140,6 +148,109 @@ func handshakeHandler(w http.ResponseWriter, r *http.Request, config *Config, st
 	json.NewEncoder(w).Encode(response)
 }
 
+// adminRequestsHandler lists pending connections.
+func adminRequestsHandler(w http.ResponseWriter, r *http.Request, store *ConnectionStore) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	pending := store.ListPending()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(pending)
+}
+
+// adminApproveHandler approves a connection request.
+func adminApproveHandler(w http.ResponseWriter, r *http.Request, store *ConnectionStore) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from path /admin/approve/{id}
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 4 {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	id := parts[3]
+
+	conn, ok := store.Get(id)
+	if !ok {
+		http.Error(w, "Connection not found", http.StatusNotFound)
+		return
+	}
+
+	if conn.Status != StatusPending {
+		http.Error(w, "Connection is not pending", http.StatusBadRequest)
+		return
+	}
+
+	token, err := GenerateToken()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	conn.Status = StatusActive
+	conn.AccessToken = token
+	store.Save(conn)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "approved", "access_token": token})
+}
+
+// handshakeStatusHandler handles polling of the handshake status.
+func handshakeStatusHandler(w http.ResponseWriter, r *http.Request, config *Config, store *ConnectionStore) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ID from path /handshakes/{id}
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 3 {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+	id := parts[2]
+
+	conn, ok := store.Get(id)
+	if !ok {
+		http.Error(w, "Connection not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if conn.Status == StatusActive {
+		response := HandshakeResponseAccepted{
+			Status: "accepted",
+			Token:  conn.AccessToken,
+			Links: []Link{
+				{
+					Rel:  "profile",
+					// For now, constructing a dummy profile link as we don't have detailed structure for it yet
+					Href: fmt.Sprintf("%s/connections/%s/profile", config.Hostname, conn.ID),
+				},
+			},
+		}
+		json.NewEncoder(w).Encode(response)
+	} else {
+		response := HandshakeResponsePending{
+			Status: "pending",
+			Token:  nil,
+			Links: []Link{
+				{
+					Rel:  "self",
+					Href: fmt.Sprintf("%s/handshakes/%s", config.Hostname, conn.ID),
+				},
+			},
+		}
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
 func main() {
 	config := &Config{
 		Hostname: "http://localhost:8080",
@@ -150,19 +261,26 @@ func main() {
 		wellKnownHandler(w, r, config)
 	})
 
-	// Register specific handler for handshake first (longest match usually wins in some routers, but ServeMux matches patterns)
-	// In ServeMux, "/api/v1/" matches everything under it.
-	// We need to be careful. If we register "/api/v1/handshake", it takes precedence over "/api/v1/".
+	// Register specific handler for handshake first
 	http.HandleFunc("/api/v1/handshake", func(w http.ResponseWriter, r *http.Request) {
 		handshakeHandler(w, r, config, store)
+	})
+
+	http.HandleFunc("/admin/requests", func(w http.ResponseWriter, r *http.Request) {
+		adminRequestsHandler(w, r, store)
+	})
+
+	http.HandleFunc("/admin/approve/", func(w http.ResponseWriter, r *http.Request) {
+		adminApproveHandler(w, r, store)
+	})
+
+	http.HandleFunc("/handshakes/", func(w http.ResponseWriter, r *http.Request) {
+		handshakeStatusHandler(w, r, config, store)
 	})
 
 	http.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
 		apiV1Handler(w, r, config)
 	})
-
-	// Also map /handshakes/ for the check_status link if we want it to work (though not strictly required by this task, good to have placeholders or just let it 404 for now).
-	// The prompt only asks to implement the POST [handshake_url].
 
 	log.Println("Starting server on localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
