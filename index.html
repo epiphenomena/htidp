@@ -76,7 +76,13 @@
                 updateStatus('Sending Request...', 'info');
                 const response = await sendHandshake(handshakeUrl, payload); // From client.js
 
-                updateStatus(`Request Sent! Status: ${response.status}`, 'success');
+                if (response.status === 'pending') {
+                    updateStatus('Request Sent. Waiting for approval...', 'success');
+                } else if (response.status === 'accepted') {
+                    updateStatus('Request Accepted!', 'success');
+                } else {
+                    updateStatus(`Request processed: ${JSON.stringify(response)}`, 'info');
+                }
                 console.log('Response:', response);
 
             } catch (err) {
