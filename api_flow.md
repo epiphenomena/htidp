@@ -91,3 +91,47 @@ An organization (e.g., `acme.com`) includes a link with a `rel` value of `https:
 ```
 
 An employee's client, upon discovering this link, can POST a standard Handshake Request to the `delegated-handshake` URL. The server at `acme.com` can then apply special logic, such as verifying the employee's email domain or checking against an internal directory, before accepting the connection and granting access to resources inherited from the organization.
+
+## 4. Visual Overview
+
+### The "HATEOAS Ladder"
+
+This diagram illustrates the client's journey from the initial well-known endpoint to obtaining an access token.
+
+```mermaid
+graph TD
+    Step1[/.well-known/htidp] -->|Returns API Root URL| Step2[API Root]
+    Step2 -->|Returns Links| Step3[Handshake URL]
+    Step3 -->|POST Request| Step4[Poll Status]
+    Step4 -->|Status: Accepted| Step5[Access Token]
+
+    style Step1 fill:#f9f,stroke:#333,stroke-width:2px
+    style Step5 fill:#bbf,stroke:#333,stroke-width:2px
+```
+
+### The Delegation Chain
+
+This sequence demonstrates how trust is delegated from an organization to a member.
+
+```mermaid
+sequenceDiagram
+    participant Bob as Bob (User)
+    participant BServer as Bob's Server
+    participant Acme as Acme (Org)
+    participant Alice as Alice (Employee)
+
+    Note over Bob, Acme: Trust Establishment
+    Bob->>BServer: Grants Access to Acme
+    BServer->>BServer: Generates Token A
+    BServer-->>Acme: Returns Token A
+
+    Note over Acme, Alice: Delegation
+    Acme->>Acme: Generates Token B (linked to A)
+    Acme-->>Alice: Grants Token B
+
+    Note over Alice, BServer: Access
+    Alice->>BServer: Requests Info (using Token B)
+    BServer->>BServer: Validates Token B
+    BServer->>BServer: Checks Linkage to Token A
+    BServer-->>Alice: Returns Data (Access Granted)
+```
