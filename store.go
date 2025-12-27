@@ -25,6 +25,7 @@ type Connection struct {
 	Signature   string
 	Status      ConnectionStatus
 	AccessToken string
+	LinkedTo    string // Parent token if this is a delegated connection
 }
 
 // ConnectionStore is a thread-safe in-memory storage for connections and server identity.

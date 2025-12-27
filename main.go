@@ -270,6 +270,64 @@ func handshakeStatusHandler(w http.ResponseWriter, r *http.Request, config *Conf
 	}
 }
 
+// DelegateRequest defines the payload for creating a delegated token.
+type DelegateRequest struct {
+	ParentToken string `json:"parent_token"`
+	EmployeeID  string `json:"employee_id"`
+}
+
+// delegateHandler handles the creation of delegated tokens.
+func delegateHandler(w http.ResponseWriter, r *http.Request, store *ConnectionStore) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req DelegateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate parent token
+	_, ok := store.GetByToken(req.ParentToken)
+	if !ok {
+		http.Error(w, "Invalid parent token", http.StatusBadRequest)
+		return
+	}
+
+	// Generate child token
+	childToken, err := GenerateToken()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Create new connection for the delegate
+	connID, err := GenerateToken()
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	delegateConn := Connection{
+		ID:          connID,
+		RequesterID: req.EmployeeID,
+		IntroText:   "Delegated Access",
+		Status:      StatusActive,
+		AccessToken: childToken,
+		LinkedTo:    req.ParentToken,
+	}
+
+	store.Save(delegateConn)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"child_token": childToken,
+		"linked_to":   req.ParentToken,
+	})
+}
+
 // RequireToken is a middleware that checks for a valid Bearer token.
 func RequireToken(next http.HandlerFunc, store *ConnectionStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -286,10 +344,19 @@ func RequireToken(next http.HandlerFunc, store *ConnectionStore) http.HandlerFun
 		}
 
 		token := parts[1]
-		_, ok := store.GetByToken(token)
+		conn, ok := store.GetByToken(token)
 		if !ok {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
+		}
+
+		if conn.LinkedTo != "" {
+			parentConn, parentOk := store.GetByToken(conn.LinkedTo)
+			parentID := "Unknown"
+			if parentOk {
+				parentID = parentConn.RequesterID
+			}
+			log.Printf("Access Delegated by [%s]", parentID)
 		}
 
 		next(w, r)
@@ -380,6 +447,10 @@ func main() {
 
 	http.HandleFunc("/admin/approve/", func(w http.ResponseWriter, r *http.Request) {
 		adminApproveHandler(w, r, store)
+	})
+
+	http.HandleFunc("/api/delegate", func(w http.ResponseWriter, r *http.Request) {
+		delegateHandler(w, r, store)
 	})
 
 	http.HandleFunc("/handshakes/", func(w http.ResponseWriter, r *http.Request) {
