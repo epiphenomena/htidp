@@ -11,7 +11,8 @@ import (
 
 // Config holds the server configuration.
 type Config struct {
-	Hostname string
+	Hostname       string
+	IsOrganization bool
 }
 
 // WellKnownResponse defines the structure for the /.well-known/htidp response.
@@ -75,18 +76,28 @@ func apiV1Handler(w http.ResponseWriter, r *http.Request, config *Config) {
 		return
 	}
 
-	response := ApiRootResponse{
-		Links: []Link{
-			{
-				Rel:  "self",
-				Href: fmt.Sprintf("%s/api/v1", config.Hostname),
-			},
-			{
-				Rel:     "handshake",
-				Href:    fmt.Sprintf("%s/api/v1/handshake", config.Hostname),
-				Methods: []string{"POST"},
-			},
+	links := []Link{
+		{
+			Rel:  "self",
+			Href: fmt.Sprintf("%s/api/v1", config.Hostname),
 		},
+		{
+			Rel:     "handshake",
+			Href:    fmt.Sprintf("%s/api/v1/handshake", config.Hostname),
+			Methods: []string{"POST"},
+		},
+	}
+
+	if config.IsOrganization {
+		links = append(links, Link{
+			Rel:     "https://htidp.org/rel/directory",
+			Href:    fmt.Sprintf("%s/api/v1/directory", config.Hostname),
+			Methods: []string{"GET"},
+		})
+	}
+
+	response := ApiRootResponse{
+		Links: links,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
@@ -302,6 +313,35 @@ func meHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(identity)
 }
 
+// Department represents an organizational unit.
+type Department struct {
+	Name        string `json:"name"`
+	IdentityURL string `json:"identity_url"`
+}
+
+// directoryHandler handles requests to /api/v1/directory.
+func directoryHandler(w http.ResponseWriter, r *http.Request, config *Config) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Hardcoded departments for demonstration
+	departments := []Department{
+		{
+			Name:        "Engineering",
+			IdentityURL: fmt.Sprintf("%s/api/departments/engineering", config.Hostname),
+		},
+		{
+			Name:        "HR",
+			IdentityURL: fmt.Sprintf("%s/api/departments/hr", config.Hostname),
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(departments)
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -313,8 +353,11 @@ func main() {
 		hostname = "http://localhost:" + port
 	}
 
+	isOrg := os.Getenv("IS_ORGANIZATION") == "true"
+
 	config := &Config{
-		Hostname: hostname,
+		Hostname:       hostname,
+		IsOrganization: isOrg,
 	}
 	store := NewConnectionStore()
 
@@ -325,6 +368,10 @@ func main() {
 	// Register specific handler for handshake first
 	http.HandleFunc("/api/v1/handshake", func(w http.ResponseWriter, r *http.Request) {
 		handshakeHandler(w, r, config, store)
+	})
+
+	http.HandleFunc("/api/v1/directory", func(w http.ResponseWriter, r *http.Request) {
+		directoryHandler(w, r, config)
 	})
 
 	http.HandleFunc("/admin/requests", func(w http.ResponseWriter, r *http.Request) {
