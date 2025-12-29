@@ -79,6 +79,19 @@ func (s *ConnectionStore) ListPending() []Connection {
 	return pending
 }
 
+// ListActive returns all connections with status Active.
+func (s *ConnectionStore) ListActive() []Connection {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var active []Connection
+	for _, conn := range s.connections {
+		if conn.Status == StatusActive {
+			active = append(active, conn)
+		}
+	}
+	return active
+}
+
 // GetByToken retrieves a connection by its access token.
 func (s *ConnectionStore) GetByToken(token string) (Connection, bool) {
 	s.mu.RLock()

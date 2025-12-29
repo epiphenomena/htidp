@@ -28,8 +28,18 @@ func TestHandshakeHandler(t *testing.T) {
 	timestamp := "2025-12-09T10:00:00Z"
 	introText := "Hi Alice, I'd like to connect."
 
-	// Reconstruct message as server expects
-	message := requesterID + timestamp + introText + pubKeyStr
+	// Reconstruct message as server expects (Canonical JSON)
+	payloadMap := map[string]string{
+		"requester_id": requesterID,
+		"timestamp":    timestamp,
+		"intro_text":   introText,
+		"public_key":   pubKeyStr,
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.Encode(payloadMap)
+	message := strings.TrimSuffix(buf.String(), "\n")
 
 	// Sign the hash of the message
 	hashed := sha256.Sum256([]byte(message))

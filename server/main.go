@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -64,6 +65,24 @@ func wellKnownHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// identityHandler returns the public identity of the server owner.
+func identityHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GET /api/v1/identity")
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	identity := map[string]string{
+		"https://htidp.org/core/vcard#fn":    "Alice Smith",
+		"https://htidp.org/core/vcard#photo": "https://alice.com/photos/profile.jpg",
+		"https://htidp.org/core/vcard#note":  "Building decentralized identity systems.",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(identity)
+}
+
 // apiV1Handler handles requests to /api/v1.
 func apiV1Handler(w http.ResponseWriter, r *http.Request, config *Config) {
 	// If the request path is exactly /api/v1 or /api/v1/, serve the root.
@@ -80,6 +99,11 @@ func apiV1Handler(w http.ResponseWriter, r *http.Request, config *Config) {
 		{
 			Rel:  "self",
 			Href: fmt.Sprintf("%s/api/v1", config.Hostname),
+		},
+		{
+			Rel:     "identity",
+			Href:    fmt.Sprintf("%s/api/v1/identity", config.Hostname),
+			Methods: []string{"GET"},
 		},
 		{
 			Rel:     "handshake",
@@ -122,10 +146,25 @@ func handshakeHandler(w http.ResponseWriter, r *http.Request, config *Config, st
 		return
 	}
 
-	// Reconstruct the signed message
-	// For this reference implementation, we concatenate fields in a deterministic order:
-	// requester_id + timestamp + intro_text + public_key
-	message := req.RequesterID + req.Timestamp + req.IntroText + req.PublicKey
+	// Reconstruct the signed message (Canonical JSON)
+	// We must match the client's canonicalization (sorted keys, no whitespace, no HTML escaping)
+	payload := map[string]string{
+		"requester_id": req.RequesterID,
+		"timestamp":    req.Timestamp,
+		"intro_text":   req.IntroText,
+		"public_key":   req.PublicKey,
+	}
+
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(payload); err != nil {
+		http.Error(w, "Error reconstructing message", http.StatusInternalServerError)
+		return
+	}
+	// json.Encoder.Encode appends a newline. JSON.stringify does not.
+	// We trim the trailing newline.
+	message := strings.TrimSuffix(buf.String(), "\n")
 
 	// Verify signature
 	if err := VerifySignature(req.PublicKey, message, req.Signature); err != nil {
@@ -176,6 +215,9 @@ func adminRequestsHandler(w http.ResponseWriter, r *http.Request, store *Connect
 	}
 
 	pending := store.ListPending()
+	if pending == nil {
+		pending = []Connection{}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(pending)
 }
@@ -409,6 +451,36 @@ func directoryHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	json.NewEncoder(w).Encode(departments)
 }
 
+// adminActiveHandler lists active connections.
+func adminActiveHandler(w http.ResponseWriter, r *http.Request, store *ConnectionStore) {
+	log.Printf("GET /admin/active")
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	active := store.ListActive()
+	if active == nil {
+		active = []Connection{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(active)
+}
+
+// CORS is a simple middleware to allow cross-origin requests.
+func CORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -437,12 +509,20 @@ func main() {
 		handshakeHandler(w, r, config, store)
 	})
 
+	http.HandleFunc("/api/v1/identity", func(w http.ResponseWriter, r *http.Request) {
+		identityHandler(w, r)
+	})
+
 	http.HandleFunc("/api/v1/directory", func(w http.ResponseWriter, r *http.Request) {
 		directoryHandler(w, r, config)
 	})
 
 	http.HandleFunc("/admin/requests", func(w http.ResponseWriter, r *http.Request) {
 		adminRequestsHandler(w, r, store)
+	})
+
+	http.HandleFunc("/admin/active", func(w http.ResponseWriter, r *http.Request) {
+		adminActiveHandler(w, r, store)
 	})
 
 	http.HandleFunc("/admin/approve/", func(w http.ResponseWriter, r *http.Request) {
@@ -464,7 +544,7 @@ func main() {
 	})
 
 	log.Printf("Starting server on port %s\n", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, CORS(http.DefaultServeMux)); err != nil {
 		log.Fatalf("could not start server: %s\n", err)
 	}
 }

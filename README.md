@@ -122,10 +122,22 @@ Establish a connection between Alice and Bob. Root URL: any valid URL after foll
 
 ## Implementation
 
-This repository includes a Python/FastAPI implementation of HTIDP.
-See [README_IMPLEMENTATION.md](README_IMPLEMENTATION.md) for details on how to run and use the implementation.
+This project contains a reference implementation consisting of a Go server and a Vanilla JS client.
 
-The project uses `pyproject.toml` and [uv](https://github.com/astral-sh/uv) for dependency management, python venv management, and python execution.
+### Project Structure
+- `/server`: Reference server implementation (Go).
+- `/client`: Reference client application (HTML/JS).
+- `api_flow.md`: Detailed HATEOAS discovery and delegation flows.
+- `schema_examples.json`: Example JSON payloads for the protocol.
+
+### Running the Server
+1. Navigate to the server directory: `cd server`
+2. Build the server: `go build -o htidp-server .`
+3. Run the server: `PORT=8000 ./htidp-server`
+
+### Running the Client
+Open `client/index.html` (Requestor) or `client/profile.html` (Profile Management) in your browser. 
+Note: Ensure the server is running and the "Connected to" field matches your server's URL.
 
 ## Future Enhancements
 
